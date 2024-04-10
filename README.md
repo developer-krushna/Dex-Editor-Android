@@ -5,13 +5,15 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [JADX](https://github.com/skylot/jadx)
 
 ## Available features 
-- [x] Add smali navigation.
+- [x] Smali navigation.
 - [x] Decompile single smali classes 
-- [x] Add decompiling single method bodies.
-- [x] Add batch class deletion
-- [x] Add smali method flow diagram
-- [x] Add editing Smali with best code editor 
-- [x] Add dex compilation enhancement 
+- [x] Decompiling single method bodies to java
+- [x] Batch class deletion
+- [x] Smali method flow diagram
+- [x] Editing Smali with best code editor 
+- [x] Dex compilation with real time progress update
+- [x] Enhancement in smali library 
+- [x] Supported DEX version 40 and 41 (Partially)
 
 ## Special thanks to
 - [Sora-Editor] for a beautiful Android TextEditor (https://github.com/Rosemoe/sora-editor)
