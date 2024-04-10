@@ -16,6 +16,8 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [x] Supported DEX version 40 and 41 (Partially)
 
 ## Special thanks to
+- [Timscriptov](https://github.com/timscriptov) for helping me in the development of Smali method flow diagram and also thanks for making server rest api ..I am really indebted to him ♥️
+
 - [Sora-Editor] for a beautiful Android TextEditor (https://github.com/Rosemoe/sora-editor)
 
 # License
