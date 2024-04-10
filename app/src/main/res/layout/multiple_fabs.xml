@@ -1,0 +1,43 @@
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+	<LinearLayout
+		android:id="@+id/linear1"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:gravity="right"
+		android:orientation="vertical">
+		<LinearLayout
+			android:id="@+id/linear2"
+			android:layout_width="60dp"
+			android:layout_height="match_parent"
+			android:layout_marginRight="14dp"
+			android:gravity="center_horizontal|bottom"
+			android:orientation="vertical">
+			<com.google.android.material.floatingactionbutton.FloatingActionButton
+				android:id="@+id/linear_fab2"
+				android:layout_width="56dp"
+				android:layout_height="56dp"
+				android:background="#F44336"
+				android:gravity="center_horizontal|center_vertical"
+				app:srcCompat="@drawable/ic_clear" />
+			<com.google.android.material.floatingactionbutton.FloatingActionButton
+				android:id="@+id/linear_fab1"
+				android:layout_width="56dp"
+				android:layout_height="56dp"
+				android:layout_marginTop="10dp"
+				android:gravity="center_horizontal|center_vertical"
+				app:srcCompat="@drawable/ic_select_rest" />
+			<LinearLayout
+				android:id="@+id/fab_default"
+				android:layout_width="56dp"
+				android:layout_height="56dp"
+				android:layout_margin="16dp"
+				android:orientation="horizontal" />
+		</LinearLayout>
+	</LinearLayout>
+</LinearLayout>

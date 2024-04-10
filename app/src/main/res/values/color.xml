@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="materialBlue">#2196f3</color>
+    <color name="materialDeepPurple">#673ab7</color>
+    <color name="materialIndigo">#3f51b5</color>
+    <color name="materialPink">#e91e63</color>
+    <color name="materialPurple">#9c27b0</color>
+    <color name="materialRed">#f44336</color>
+    <color name="textColorPrimary">#FFFFFF</color>
+    <color name="textColorSecondary">#FFFFFF</color>
+    <color name="colorHeader">@color/colorPrimary</color>
+    <color name="colorWhite">@android:color/white</color>
+    <color name="colorBlack">@android:color/black</color>
+</resources>
