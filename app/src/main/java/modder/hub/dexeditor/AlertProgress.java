@@ -73,11 +73,11 @@ public class AlertProgress{
 		alert = process.create();
 		
 		int cornerRadius = 20;
-		GradientDrawable ରାଧେ = new GradientDrawable();
-		ରାଧେ.setColor(Color.parseColor("#FFFFFF"));
-		ରାଧେ.setCornerRadius(cornerRadius);
+		GradientDrawable gd = new GradientDrawable();
+		gd.setColor(Color.parseColor("#FFFFFF"));
+		gd.setCornerRadius(cornerRadius);
 		alert.setCancelable(false);
-		alert.getWindow().setBackgroundDrawable(ରାଧେ);
+		alert.getWindow().setBackgroundDrawable(gd);
 		
 	}
 	

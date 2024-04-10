@@ -98,10 +98,10 @@ public class Notify_MT {
 	
 	public static void Notify(Context context, String title_mt, String message_mt, String cancel_mt) {
 		try {
-			final Builder ରାଧା = new Builder(context);
-			ରାଧା.setTitle(title_mt);
-			ରାଧା.setMessage(message_mt);
-			ରାଧା.setPositiveButton(cancel_mt, new DialogInterface.OnClickListener() {
+			final Builder builder = new Builder(context);
+			builder.setTitle(title_mt);
+			builder.setMessage(message_mt);
+			builder.setPositiveButton(cancel_mt, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dia, int which) {
 					// nothing
@@ -110,12 +110,12 @@ public class Notify_MT {
 			
 			// Setting custom background
 			int cornerRadius = 20;
-			android.graphics.drawable.GradientDrawable ରାଧେ = new android.graphics.drawable.GradientDrawable();
-			ରାଧେ.setColor(Color.parseColor("#FFFFFF"));
-			ରାଧେ.setCornerRadius(cornerRadius);
+			android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+			gd.setColor(Color.parseColor("#FFFFFF"));
+			gd.setCornerRadius(cornerRadius);
 			
-			final AlertDialog alert = ରାଧା.create();
-			alert.getWindow().setBackgroundDrawable(ରାଧେ);
+			final AlertDialog alert = builder.create();
+			alert.getWindow().setBackgroundDrawable(gd);
 			alert.show();
 			final TextView message = alert.findViewById(android.R.id.message);
 			message.setTextIsSelectable(true);
@@ -128,12 +128,12 @@ public class Notify_MT {
 	public static void Dlg_Style(AlertDialog.Builder dialog){
 		
 		int cornerRadius = 20;
-		android.graphics.drawable.GradientDrawable ରାଧେ = new android.graphics.                      
+		android.graphics.drawable.GradientDrawable gd = new android.graphics.                      
 		drawable.GradientDrawable();
-		ରାଧେ.setColor(Color.parseColor("#FFFFFF"));
-		ରାଧେ.setCornerRadius(cornerRadius);
+		gd.setColor(Color.parseColor("#FFFFFF"));
+		gd.setCornerRadius(cornerRadius);
 		final AlertDialog alert = dialog.create();
-		alert.getWindow().setBackgroundDrawable(ରାଧେ);
+		alert.getWindow().setBackgroundDrawable(gd);
 		try{
 			alert.show();
 		} catch (WindowManager.BadTokenException e){

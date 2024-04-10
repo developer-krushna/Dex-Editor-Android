@@ -168,10 +168,10 @@ public class DexEditorActivity extends AppCompatActivity {
 				prog.setCancelable(false);
 				prog.setCanceledOnTouchOutside(false);
 				int cornerRadius = 20;
-				android.graphics.drawable.GradientDrawable ରାଧେ = new android.graphics.drawable.GradientDrawable();
-				ରାଧେ.setColor(Color.parseColor("#FFFFFF"));
-				ରାଧେ.setCornerRadius(cornerRadius);
-				prog.getWindow().setBackgroundDrawable(ରାଧେ);
+				android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+				gd.setColor(Color.parseColor("#FFFFFF"));
+				gd.setCornerRadius(cornerRadius);
+				prog.getWindow().setBackgroundDrawable(gd);
 				prog.show();
 				getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 				final Handler uiHandler = new Handler(Looper.getMainLooper());
