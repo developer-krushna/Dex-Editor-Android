@@ -1,40 +1,40 @@
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
- * Copyright 2024, developer-krushna
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of developer-krushna nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
- */
+* Dex-Editor-Android an Advanced Dex Editor for Android 
+* Copyright 2024, developer-krushna
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*
+*     * Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above
+* copyright notice, this list of conditions and the following disclaimer
+* in the documentation and/or other materials provided with the
+* distribution.
+*     * Neither the name of developer-krushna nor the names of its
+* contributors may be used to endorse or promote products derived from
+* this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+* OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
- 
- 
+
+*     Please contact Krushna by email mt.modder.hub@gmail.com if you need
+*     additional information or have any questions
+*/
+
+
+
 package modder.hub.dexeditor;
 
 import android.Manifest;
@@ -99,27 +99,37 @@ public class DexEditorActivity extends AppCompatActivity {
 	private Toolbar _toolbar;
 	private AppBarLayout _app_bar;
 	private CoordinatorLayout _coordinator;
-	private FloatingActionButton _fab;
+	private FloatingActionButton fab_delete;
+	
 	private HashMap<String, Object> map = new HashMap<>();
+	
 	private String listData = "";
 	private String dex_path = "";
+	
 	public static ClassTree classTree;
+	
 	private LinearLayout fab_bg;
-	private  int initialLongPressPosition = RecyclerView.NO_POSITION;
-	private  boolean isBetweenSelectionActive = false;
-	private  boolean isSelectionMode = false;
+	
 	private  SparseBooleanArray selectedItems = new SparseBooleanArray();
+	
 	public static boolean isChanged = false;
 	public static boolean isSaved = false;
+	private  boolean isBetweenSelectionActive = false;
+	private  boolean isSelectionMode = false;
 	
 	private ArrayList<String> classList = new ArrayList<>();
-	private ArrayList<HashMap<String, Object>> File_Map = new ArrayList<>();
+	private ArrayList<HashMap<String, Object>> classMap = new ArrayList<>();
 	
 	private RecyclerView recyclerview1;
 	
 	private AlertDialog.Builder d;
+	
+	
 	private ProgressDialog prog;
 	private ProgressDialog coreprog;
+	
+	private int STORAGE_REQUEST_CODE = 1000;
+	private  int initialLongPressPosition = RecyclerView.NO_POSITION;
 	
 	@Override
 	protected void onCreate(Bundle _savedInstanceState) {
@@ -127,8 +137,9 @@ public class DexEditorActivity extends AppCompatActivity {
 		setContentView(R.layout.dex_editor);
 		initialize(_savedInstanceState);
 		
+		// Check Storage permission 
 		if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
-			ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 1000);
+			ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
 		} else {
 			initializeLogic();
 		}
@@ -137,7 +148,7 @@ public class DexEditorActivity extends AppCompatActivity {
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		if (requestCode == 1000) {
+		if (requestCode == STORAGE_REQUEST_CODE) {
 			initializeLogic();
 		}
 	}
@@ -149,45 +160,47 @@ public class DexEditorActivity extends AppCompatActivity {
 		setSupportActionBar(_toolbar);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		getSupportActionBar().setHomeButtonEnabled(true);
+		
+		//ToolBar navigation auto-gererated code by Sketchware Pro
 		_toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View _v) {
 				onBackPressed();
 			}
 		});
-		_fab = findViewById(R.id._fab);
+		
+		fab_delete = findViewById(R.id.fab_delete);
 		
 		recyclerview1 = findViewById(R.id.recyclerview1);
 		d = new AlertDialog.Builder(this);
 		
 		
-		_fab.setOnClickListener(new View.OnClickListener() {
+		fab_delete.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View _view) {
 				prog = new ProgressDialog(DexEditorActivity.this);
 				prog.setCancelable(false);
 				prog.setCanceledOnTouchOutside(false);
-				int cornerRadius = 20;
-				android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
-				gd.setColor(Color.parseColor("#FFFFFF"));
-				gd.setCornerRadius(cornerRadius);
-				prog.getWindow().setBackgroundDrawable(gd);
+				prog.getWindow().setBackgroundDrawable(createDrawable(20, Color.parseColor("#FFFFFF")));
 				prog.show();
+				//Keep screen on during processing
 				getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+				// UI Handler
 				final Handler uiHandler = new Handler(Looper.getMainLooper());
 				new Thread() {
 					public void run() {
 						Looper.prepare();
 						try {
 							ArrayList<Integer> selectedPositions = new ArrayList<>();
-							for (int i = 0; i < (int)(File_Map.size()); i++) {
+							for (int i = 0; i < (int)(classMap.size()); i++) {
 								if (selectedItems.get(i)) {
+									//add selected
 									selectedPositions.add(i);
 								}
 							}
 							for (int i = ((int) selectedPositions.size() - 1); i > -1; i--) {
 								int position = selectedPositions.get(i);
-								HashMap<String, Object> selectedItem = File_Map.get(position);
+								HashMap<String, Object> selectedItem = classMap.get(position);
 								String classListItem = selectedItem.get("ClassList").toString();
 								runOnUiThread(new Runnable() {
 									@Override
@@ -196,7 +209,7 @@ public class DexEditorActivity extends AppCompatActivity {
 										prog.setMessage(classListItem);
 									}
 								});
-								File_Map.remove(position);
+								classMap.remove(position);
 							}
 							selectedItems.clear();
 							isChanged = true;
@@ -205,21 +218,23 @@ public class DexEditorActivity extends AppCompatActivity {
 								public void run() {
 									_clearChoosed();
 									recyclerview1.getAdapter().notifyDataSetChanged();
-									_refreshRecycler();
+									_refreshRecyclerView();
 								}
 							});
 						} catch (final Exception e) {
 							uiHandler.post(new Runnable() {
 								@Override
 								public void run() {
-									Notify_MT.Notify(DexEditorActivity.this, "Error", e.toString(), "close");
+									ErrorDlg(e.toString());
 								}
 							});
 						}
 						uiHandler.post(new Runnable() {
 							@Override
 							public void run() {
+								// Stop screen on
 								getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+								// Progress dismiss
 								prog.dismiss();
 							}
 						});
@@ -232,14 +247,16 @@ public class DexEditorActivity extends AppCompatActivity {
 	private void initializeLogic() {
 		dex_path = getIntent().getStringExtra("Path");
 		setTitle("DexEditor");
-		_processing_dlg(true);
+		_showProcessingProgress(true);
 		_fab_Initialization();
-		_fab.hide();
+		// Delete fab colour changed to red color
+		fab_delete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
+		fab_delete.hide();
 		new Thread() {
 			@Override
 			public void run() {
 				try {
-					classTree = new ClassTree(getIntent().getStringExtra("Path"));
+					classTree = new ClassTree(dex_path);
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
@@ -248,14 +265,16 @@ public class DexEditorActivity extends AppCompatActivity {
 							for (int i = 0; i < (int)(classList.size()); i++) {
 								map = new HashMap<>();
 								map.put("ClassList", classList.get((int)(i)));
-								File_Map.add(map);
-								_refreshRecycler();
-								listData = new Gson().toJson(File_Map);
+								classMap.add(map);
+								//first refresh RecyclerView
+								_refreshRecyclerView();
+								// then load listData
+								listData = new Gson().toJson(classMap);
 							}
 						}
 					});
 				} catch (Exception e) {
-					_processing_dlg(false);
+					_showProcessingProgress(false);
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
@@ -269,11 +288,13 @@ public class DexEditorActivity extends AppCompatActivity {
 								}
 							});
 							d_build.setCancelable(false);
-							d_build.create().show();
+							// Dialog Background Animation 
+							Notify_MT.Dlg_Style(d_build);
 						}
 					});
 				}
-				_processing_dlg(false);
+				// Cancel processing progress
+				_showProcessingProgress(false);
 			} }.start();
 	}
 	
@@ -292,6 +313,7 @@ public class DexEditorActivity extends AppCompatActivity {
 						progressDialog.show();
 						final Handler mHandler = new Handler() {
 							public void handleMessage(Message msg) {
+								// Dismiss the progress after successful or failure 
 								progressDialog.dismiss();
 							} 
 						};
@@ -308,11 +330,10 @@ public class DexEditorActivity extends AppCompatActivity {
 													progressDialog.setProgress(progress, total);
 												}
 											});
-											
 										}
 										
 										public void onMessage(String name) {
-											DexEditorActivity.this.runOnUiThread(new Runnable() {
+											runOnUiThread(new Runnable() {
 												@Override
 												public void run() {
 													progressDialog.setMessage(name);
@@ -321,7 +342,6 @@ public class DexEditorActivity extends AppCompatActivity {
 										}
 										
 									});
-									
 									
 									runOnUiThread(new Runnable() {
 										@Override
@@ -332,7 +352,7 @@ public class DexEditorActivity extends AppCompatActivity {
 									});
 									
 								} catch (Exception e) {
-									Notify_MT.Notify(DexEditorActivity.this, "Error", "An error occurred while processing dex\n\n---StackTrace---\n\n" + e.toString(), "Close");
+									ErrorDlg("An error occurred while processing dex\n\n---StackTrace---\n\n" + e.toString());
 								}
 								mHandler.sendEmptyMessage(0);
 								Looper.loop();
@@ -358,7 +378,7 @@ public class DexEditorActivity extends AppCompatActivity {
 				Notify_MT.Dlg_Style(d);
 			}
 			else {
-				File_Map.clear();
+				classMap.clear();
 				classTree.clearAll();
 				isSaved = false;
 				isChanged= false;
@@ -366,30 +386,34 @@ public class DexEditorActivity extends AppCompatActivity {
 			}
 		}
 		else {
-			File_Map.clear();
+			classMap.clear();
 			classList = classTree.getList("../");
 			_clearChoosed();
 			for (int i = 0; i < (int)(classList.size()); i++) {
 				map = new HashMap<>();
 				map.put("ClassList", classList.get((int)(i)));
-				File_Map.add(map);
-				_refreshRecycler();
+				classMap.add(map);
+				_refreshRecyclerView();
 				getSupportActionBar().setSubtitle("/" + classTree.tree.getCurPath());
 			}
 		}
 	}
 	public void _refresh() {
 		String cuPath = classTree.tree.getCurPath();
-		File_Map.clear();
+		classMap.clear();
 		classList = classTree.tree.list(cuPath);
 		for (int i = 0; i < (int)(classList.size()); i++) {
 			map = new HashMap<>();
 			map.put("ClassList", classList.get((int)(i)));
-			File_Map.add(map);
-			recyclerview1.setAdapter(new Recyclerview1Adapter(File_Map));
+			classMap.add(map);
+			recyclerview1.setAdapter(new Recyclerview1Adapter(classMap));
 			recyclerview1.setLayoutManager(new LinearLayoutManager(this));
-			listData = new Gson().toJson(File_Map);
+			listData = new Gson().toJson(classMap);
 		}
+	}
+	
+	public void ErrorDlg(String msg){
+		Notify_MT.Notify(this, getResources().getString(R.string.error_title), msg, getResources().getString(R.string.close_btn));
 	}
 	
 	
@@ -398,8 +422,8 @@ public class DexEditorActivity extends AppCompatActivity {
 			isSelectionMode = false;
 			initialLongPressPosition = RecyclerView.NO_POSITION;
 			selectedItems.clear();
-			_Show(false);
-			_fab.hide();
+			_show_multiple_fabs(false);
+			fab_delete.hide();
 			recyclerview1.getAdapter().notifyDataSetChanged();
 			recyclerview1.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
 				@Override
@@ -419,37 +443,31 @@ public class DexEditorActivity extends AppCompatActivity {
 	}
 	
 	
-	public void _processing_dlg(final boolean _ifShow) {
+	public void _showProcessingProgress(final boolean _ifShow) {
 		if (_ifShow) {
 			if (coreprog == null){
 				coreprog = new ProgressDialog(this);
 				coreprog.setCancelable(false);
 				coreprog.setCanceledOnTouchOutside(false);
-				coreprog.requestWindowFeature(Window.FEATURE_NO_TITLE);  coreprog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+				coreprog.requestWindowFeature(Window.FEATURE_NO_TITLE);  
+				coreprog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 				
 			}
 			coreprog.setMessage(null);
 			runOnUiThread(new Runnable(){
 				@Override
-				public void run()
-				{
-					
+				public void run() {
 					coreprog.show();
 				}
 			});
 			// custom view name here 
 			coreprog.setContentView(R.layout.loading);
-			//Initialisation 
+			//Initialisation of views
 			LinearLayout linear2 = (LinearLayout)coreprog.findViewById(R.id.linear2);
 			LinearLayout background = (LinearLayout)coreprog.findViewById(R.id.background);
 			LinearLayout layout_progress = (LinearLayout)coreprog.findViewById(R.id.layout_progress);
 			
-			//background 
-			GradientDrawable gd = new GradientDrawable(); 
-			gd.setColor(Color.parseColor("#E0E0E0")); /* color */
-			gd.setCornerRadius(40); /* radius */
-			gd.setStroke(0, Color.WHITE); /* stroke heigth and color */
-			linear2.setBackground(gd);
+			linear2.setBackground(createDrawable(40, Color.parseColor("#E0E0E0")));
 			
 			//RadialProgressView
 			RadialProgressView progress = new RadialProgressView(this);
@@ -460,9 +478,7 @@ public class DexEditorActivity extends AppCompatActivity {
 			if (coreprog != null){
 				runOnUiThread(new Runnable(){
 					@Override
-					public void run()
-					{
-						
+					public void run() {
 						coreprog.dismiss();
 					}
 				});
@@ -479,31 +495,26 @@ public class DexEditorActivity extends AppCompatActivity {
 		}
 		else {
 			selectedItems.put((int)_position, true);
-			_fab.show();
-			_view.setBackground(new GradientDrawable() { public GradientDrawable getIns(int a, int b) { this.setCornerRadius(a); this.setColor(b); return this; } }.getIns((int)13, 0xFF42A5F5));
-			_Show(true);
+			fab_delete.show();
+			_view.setBackground(createDrawable(13, 0xFF42A5F5));
+			_show_multiple_fabs(true);
 		}
 		if (selectedItems.size() == 0) {
-			_Show(false);
-			_fab.hide();
+			_show_multiple_fabs(false);
+			fab_delete.hide();
 			isSelectionMode = false;
 		}
 	}
 	
 	
-	public void _refreshRecycler() {
-		recyclerview1.setAdapter(new Recyclerview1Adapter(File_Map));
+	public void _refreshRecyclerView() {
+		recyclerview1.setAdapter(new Recyclerview1Adapter(classMap));
 		recyclerview1.setLayoutManager(new LinearLayoutManager(this));
 	}
 	
 	
-	public void _SetRadiusToView(final View _view, final double _radius, final String _Colour) {
-		android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable(); gd.setColor(Color.parseColor(_Colour)); gd.setCornerRadius((int)_radius); _view.setBackground(gd);
-	}
-	
-	
-	public void _Show(final boolean _Show) {
-		if (_Show) {
+	public void _show_multiple_fabs(final boolean show) {
+		if (show) {
 			fab_bg.setVisibility(View.VISIBLE);
 			fab_bg.setTranslationY((float)(getDip(50)));
 			fab_bg.setAlpha((float)(0));
@@ -516,16 +527,30 @@ public class DexEditorActivity extends AppCompatActivity {
 	
 	
 	public void _fab_Initialization() {
+        //load and inflate multiple_fabs layout
 		View cv = getLayoutInflater().inflate(R.layout.multiple_fabs, null);
-		fab_bg = (LinearLayout)cv.findViewById(R.id.linear1);
-		FloatingActionButton fab1 = (FloatingActionButton)fab_bg.findViewById(R.id.linear_fab1);
-		FloatingActionButton fab2 = (FloatingActionButton)fab_bg.findViewById(R.id.linear_fab2);
-		_Remove(fab_bg);
-		((ViewGroup)_fab.getParent()).addView(fab_bg);
-		fab1.setOnClickListener(new View.OnClickListener() {
+		
+		// Initialisation of views 
+		fab_bg = (LinearLayout) cv.findViewById(R.id.linear_bg);
+		FloatingActionButton fab_select_rest = (FloatingActionButton) fab_bg.findViewById(R.id.fab_select_rest);
+		FloatingActionButton fab_clear = (FloatingActionButton) fab_bg.findViewById(R.id.fab_clear);
+        
+		//First remove
+		((ViewGroup)fab_bg.getParent()).removeView(fab_bg);
+		
+		// Then add fab_bg as a parent view of fab_delete
+		((ViewGroup)fab_delete.getParent()).addView(fab_bg);
+		
+		// fab background color tint
+		fab_clear.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
+		fab_select_rest.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
+		
+		
+		//Click listener
+		fab_select_rest.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View _view) {
-				for (int i = 0; i < (int)(File_Map.size()); i++) {
+				for (int i = 0; i < (int)(classMap.size()); i++) {
 					if (selectedItems.get(i, false)) {
 						selectedItems.delete(i);
 					}
@@ -536,58 +561,39 @@ public class DexEditorActivity extends AppCompatActivity {
 				recyclerview1.getAdapter().notifyDataSetChanged();
 			}
 		});
-		fab2.setOnClickListener(new View.OnClickListener() {
+		
+		//fab_clear click listener
+		fab_clear.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View _view) {
-				if (isSelectionMode) {
-					isSelectionMode = false;
-					initialLongPressPosition = RecyclerView.NO_POSITION;
-					selectedItems.clear();
-					_Show(false);
-					_fab.hide();
-					recyclerview1.getAdapter().notifyDataSetChanged();
-					recyclerview1.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
-						@Override
-						public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
-							return false;
-						}
-						
-						@Override
-						public void onTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
-						}
-						
-						@Override
-						public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
-						}
-					});
-				}
+				_clearChoosed();
 			}
 		});
-		_Show(false);
+		_show_multiple_fabs(false);
 	}
 	
 	public static String getSmaliByType(ClassDef classDef, String Type) throws Exception {
-		
 		StringWriter stringWriter = new StringWriter();
 		BaksmaliWriter writer = new BaksmaliWriter(stringWriter);
 		ClassDefinition classDefinition = new ClassDefinition(new BaksmaliOptions(), classDef);
 		classDefinition.writeTo(writer);
 		writer.close();
-		
 		String code = stringWriter.toString();
 		return code;
 	}
 	
 	
-	public void _Remove(final View _view) {
-		//By Solo Studio
-		((ViewGroup)_view.getParent()).removeView(_view);
-	}
-	
 	@Deprecated
 	public float getDip(int _input) {
 		return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, _input, getResources().getDisplayMetrics());
 		
+	}
+	
+	private GradientDrawable createDrawable(int cornerRadius, int color) {
+		GradientDrawable drawable = new GradientDrawable();
+		drawable.setCornerRadius(cornerRadius);
+		drawable.setColor(color);
+		return drawable;
 	}
 	
 	public String customException(Exception e){
@@ -620,79 +626,96 @@ public class DexEditorActivity extends AppCompatActivity {
 		public void onBindViewHolder(ViewHolder _holder, final int _position) {
 			View _view = _holder.itemView;
 			
-			final LinearLayout background = _view.findViewById(R.id.background);
+			// Initialize views within the item layout
+			final LinearLayout linear_bg = _view.findViewById(R.id.linear_bg);
 			final LinearLayout icon_background = _view.findViewById(R.id.icon_background);
 			final TextView name = _view.findViewById(R.id.name);
 			final ImageView imageview1 = _view.findViewById(R.id.imageview1);
 			
+			// Retrieve class name from the data list based on current position
 			String className = _data.get((int)_position).get("ClassList").toString();
+			
+			// Set class name as text for the name TextView
 			name.setText(className);
 			
+			// Check if classTree and classTree.tree are not null
 			if (classTree != null && classTree.tree != null) {
-				if (classTree.tree.isDirectory(_data.get((int)_position).get("ClassList").toString())) {
+				// Check if the class is a directory or not, and set appropriate icon and linear_bg color
+				if (classTree.tree.isDirectory(className)) {
 					imageview1.setImageResource(R.drawable.ic_folder_mt);
-					icon_background.setBackground(new GradientDrawable() { public GradientDrawable getIns(int a, int b) { this.setCornerRadius(a); this.setColor(b); return this; } }.getIns((int)6, 0xFF252525));
-				}
-				else {
-					icon_background.setBackground(new GradientDrawable() { public GradientDrawable getIns(int a, int b) { this.setCornerRadius(a); this.setColor(b); return this; } }.getIns((int)100, 0xFF3860AF));
+					icon_background.setBackground(createDrawable(8, 0xFF252525));
+				} else {
+					icon_background.setBackground(createDrawable(100, 0xFF3860AF));
 					imageview1.setImageResource(R.drawable.smali_icon_mt);
-					name.setText(className);
 				}
 			}
+			
+			// Set linear_bg color based on selection state of the item
 			if (selectedItems.get((int)_position, false)) {
-				background.setBackground(new GradientDrawable() { public GradientDrawable getIns(int a, int b) { this.setCornerRadius(a); this.setColor(b); return this; } }.getIns((int)13, 0xFF42A5F5));
+				linear_bg.setBackground(createDrawable(13, 0xFF42A5F5));
 			}
 			else {
-				background.setBackground(ContextCompat.getDrawable(DexEditorActivity.this, R.drawable.rounded_corner_ripple));
+				linear_bg.setBackground(ContextCompat.getDrawable(DexEditorActivity.this, R.drawable.rounded_corner_ripple));
 			}
-			background.setOnClickListener(new View.OnClickListener() {
+			
+			// Set click listener on the item linear_bg
+			linear_bg.setOnClickListener(new View.OnClickListener() {
 				@Override
 				public void onClick(View _view) {
 					if (isSelectionMode) {
 						isBetweenSelectionActive = false;
 						initialLongPressPosition = RecyclerView.NO_POSITION;
-						_toggleSelection(_position, background);
+						_toggleSelection(_position, linear_bg);
 					}
 					else {
-						String curFile = File_Map.get((int)_position).get("ClassList").toString();
+						String curFile = className;
 						if (classTree.tree.isDirectory(curFile)) {
-							File_Map.clear();
+							// Update RecyclerView with list of classes within the directory
+							classMap.clear();
 							classList = classTree.getList(curFile);
 							for (int i = 0; i < (int)(classList.size()); i++) {
+								// Convert class list map to HashMap
 								map = new HashMap<>();
 								map.put("ClassList", classList.get((int)(i)));
-								File_Map.add(map);
+								// Add to classMap
+								classMap.add(map);
 								getSupportActionBar().setSubtitle("/".concat(classTree.tree.getCurPath()));
 								notifyDataSetChanged();
-								_refreshRecycler();
+								_refreshRecyclerView();
 							}
 							return;
 						} else {
 							try{
+								// Get Smali data for classDef
 								String smali = getSmaliByType(classTree.classMap.get(classTree.tree.getCurPath() + curFile), "L" + (classTree.tree.getCurPath() + curFile) + ";");
 								byte[] b = smali.getBytes();
+								
+								// Initialize TextEditorActivity 
 								TextEditorActivity editor = new TextEditorActivity();
 								editor.classTree = classTree;
+								// Start activity 
 								Intent i = new Intent (DexEditorActivity.this, editor.getClass());
 								i.putExtra("Smali", b);
 								i.putExtra("ClassName", className);
 								startActivity(i);
 								com.blogspot.atifsoftwares.animatoolib.Animatoo.animateSlideRight(DexEditorActivity.this);
 								return;
-							}catch (Exception e){
+							} catch (Exception e){
 								Notify_MT.Notify(DexEditorActivity.this, "Error", customException(e), "Close");
 							}
 						}
 					}
 				}
 			});
-			background.setOnLongClickListener(new View.OnLongClickListener() {
+			
+			// Set long click listener on the item linear_bg
+			linear_bg.setOnLongClickListener(new View.OnLongClickListener() {
 				@Override
 				public boolean onLongClick(View _view) {
 					if (!isSelectionMode) {
 						isSelectionMode = true;
 					}
-					_toggleSelection(_position, background);
+					_toggleSelection(_position, linear_bg);
 					if (!isBetweenSelectionActive) {
 						if (initialLongPressPosition == RecyclerView.NO_POSITION) {
 							initialLongPressPosition = _position;
@@ -710,7 +733,7 @@ public class DexEditorActivity extends AppCompatActivity {
 						}
 					}
 					else {
-						_toggleSelection(_position, background);
+						_toggleSelection(_position, linear_bg);
 					}
 					return true;
 				}
