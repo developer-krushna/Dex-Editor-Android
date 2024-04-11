@@ -145,6 +145,8 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 	private TimerTask t;
     private Intent ii = new Intent();
 	
+    private ProgressDialog coreprog;
+    
 	@Override
 	protected void onCreate(Bundle _savedInstanceState) {
 		super.onCreate(_savedInstanceState);
@@ -350,6 +352,7 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 		return super.onOptionsItemSelected(item);
 	}
 	
+    // You should rename the IThemSourceMT to it's actual name IThemSource
 	private TextMateColorScheme getColorScheme(String themeName) {
 		try {
 			IThemeSource themeSource = IThemeSourceMT.fromInputStream(
@@ -364,7 +367,13 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 		}
 		return null;
 	}
-	
+    
+    
+	/* Here also rename the IGrammarSourceMT to actual name IGrammarSource
+    
+    *It was happened with me because of D8 Dexer
+    
+    */
 	private Language getSmaliLanguage(String themeName) {
 		try {
 			return TextMateLanguage.create(
@@ -406,14 +415,15 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 						coreprog.show();
 					}
 				});
-			} catch (WindowManager.BadTokenException e){
-				
-			}
+			} catch (WindowManager.BadTokenException e){ }
 			coreprog.setContentView(R.layout.loading);
+            
+            //Initialisation of views
 			LinearLayout linear2 = (LinearLayout)coreprog.findViewById(R.id.linear2);
 			LinearLayout background = (LinearLayout)coreprog.findViewById(R.id.background);
 			LinearLayout layout_progress = (LinearLayout)coreprog.findViewById(R.id.layout_progress);
-			android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            // Background
+			GradientDrawable gd = new GradientDrawable();
 			gd.setColor(Color.parseColor("#E0E0E0"));
 			gd.setCornerRadius(40);
 			gd.setStroke(0, Color.WHITE); 
@@ -425,17 +435,13 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 			if (coreprog != null) {
 				runOnUiThread(new Runnable(){
 					@Override
-					public void run()
-					{
+					public void run() {
 						coreprog.dismiss();
-					} });
+					} 
+                    });
 			}
 		}
 	}
-	private ProgressDialog coreprog;
-	{
-	}
-	
 	
 	public void _handleJava2SmaliIntent() {
 		_loadTheme();
