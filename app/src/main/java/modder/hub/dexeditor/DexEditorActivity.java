@@ -207,7 +207,7 @@ public class DexEditorActivity extends AppCompatActivity {
 									public void run() {
 										classTree.removeClass(classTree.tree.getCurPath() + classListItem);
 										prog.setMessage(classListItem);
-									}
+								       }
 								});
 								classMap.remove(position);
 							}
