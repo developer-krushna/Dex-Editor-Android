@@ -6,7 +6,7 @@
 	android:layout_height="match_parent"
 	android:orientation="vertical">
 	<LinearLayout
-		android:id="@+id/linear1"
+		android:id="@+id/linear_bg"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:gravity="right"
@@ -19,14 +19,13 @@
 			android:gravity="center_horizontal|bottom"
 			android:orientation="vertical">
 			<com.google.android.material.floatingactionbutton.FloatingActionButton
-				android:id="@+id/linear_fab2"
+				android:id="@+id/fab_clear"
 				android:layout_width="56dp"
 				android:layout_height="56dp"
-				android:background="#F44336"
 				android:gravity="center_horizontal|center_vertical"
 				app:srcCompat="@drawable/ic_clear" />
 			<com.google.android.material.floatingactionbutton.FloatingActionButton
-				android:id="@+id/linear_fab1"
+				android:id="@+id/fab_select_rest"
 				android:layout_width="56dp"
 				android:layout_height="56dp"
 				android:layout_marginTop="10dp"
