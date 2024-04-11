@@ -22,6 +22,9 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [Sora-Editor] for a beautiful Android TextEditor (https://github.com/Rosemoe/sora-editor)
 ## My work
 - [Download Modder Hub](https://modder-hub.blogspot.com)
+
+## Join Telegram
+- [Coding Guys](https://t.me/coding_guys)
   
 # License
     Copyright (C) 2024 Krushna Chandra
