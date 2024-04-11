@@ -191,11 +191,11 @@ public class SmaliMethodListFragment extends DialogFragment {
 		}
 		toolbar.setTitle("Navigation");
 		toolbar.inflateMenu(R.menu.close_menu);
+        
 		Menu menu = toolbar.getMenu();
 		MenuItem searchItem = menu.findItem(R.id.search);
 		MenuItem closeItem = menu.findItem(R.id.close);
-		Drawable iconDrawable = closeItem.getIcon();
-		iconDrawable.setColorFilter(ContextCompat.getColor(getActivity(), R.color.colorBlack), PorterDuff.Mode.SRC_IN);
+        
 		searchItem.setVisible(true);
 		androidx.appcompat.widget.SearchView searchView = (androidx.appcompat.widget.SearchView) menu.findItem(R.id.search).getActionView();
 		searchView.setQueryHint("Search");
@@ -446,7 +446,8 @@ public class SmaliMethodListFragment extends DialogFragment {
 				coreprog.setCancelable(false);
 				coreprog.setCanceledOnTouchOutside(false);
 				
-				coreprog.requestWindowFeature(Window.FEATURE_NO_TITLE);  coreprog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+				coreprog.requestWindowFeature(Window.FEATURE_NO_TITLE);  
+                coreprog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
 				
 			}
 			coreprog.setMessage(null);
