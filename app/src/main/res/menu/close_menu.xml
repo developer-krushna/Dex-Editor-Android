@@ -6,12 +6,10 @@
         android:title="Search"
         android:visible="false"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
-        app:showAsAction="ifRoom" />   
-   
-        
+        app:showAsAction="ifRoom" />
     <item
         app:showAsAction="always"
-        android:icon="@drawable/ic_clear"
+        android:icon="@drawable/ic_clear_black"
         android:id="@+id/close"
         android:title="Close"/>
 </menu>
