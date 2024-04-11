@@ -106,12 +106,13 @@ public class ClassTree {
 	byte[] data;
 	byte[] input;
 	
-	
+	// Constructor
 	public ClassTree(String mPath) throws Exception {
 		this.Path = mPath;
 		initDex();
 	}
-	
+    
+	// Initialize the DEX file
 	private void initDex() throws Exception {
 		input = read(Path);
 		dexFile = DexBackedDexFile.fromInputStream(Opcodes.getDefault(), new ByteArrayInputStream(input));
@@ -119,7 +120,7 @@ public class ClassTree {
 		initClassMap();
 	}
 	
-	
+	// Initialize the class map
 	private void initClassMap() {
 		if (classMap == null) {
 			classMap = new HashMap<String, ClassDef>();
@@ -136,7 +137,7 @@ public class ClassTree {
 		tree = new Tree(classMap);
 	}
 	
-	
+	// Get the list of classes in a directory
 	public ArrayList<String> getList(String dir) {
 		
 		if (dir.equals("/")) {
@@ -158,15 +159,14 @@ public class ClassTree {
 		return list;
 	}
 	
-	
+	// Set the current class
 	public void setCurrnetClass(String className) {
 		curClassDef = classMap.get(className);
 	}
 	
-	
+	// Remove a class
 	public void removeClass(String className) {
-		
-		{
+	    {
 			Iterator classIterator = classMap.keySet().iterator();
 			while (classIterator.hasNext()) {
 				ClassDef classDef = classMap.get(classIterator.next());
@@ -209,6 +209,7 @@ public class ClassTree {
 		
 	}
 	
+    // Clear all data
 	public void clearAll() {
 		if (classMap != null)
 		classMap.clear();
@@ -221,7 +222,7 @@ public class ClassTree {
 		System.gc();
 	}
 	
-	
+	// Tree class for managing directory structure
 	public class Tree {
 		private List<Map<String, String>> node;
 		private Comparator<String> sortByType = new Comparator<String>() {
@@ -337,7 +338,8 @@ public class ClassTree {
 			return sb.toString();
 		}
 	}
-	
+    
+	// Save a class definition
 	public void saveClassDef(ClassDef classDef) throws Exception {
 		DexBuilder dexBuilder = new DexBuilder(Opcodes.getDefault());
 		dexBuilder.setIgnoreMethodAndFieldError(true);
@@ -352,7 +354,7 @@ public class ClassTree {
 		
 	}
 	
-	
+	// save final Dex file
 	public void saveDexFile(String destPath, DexSaveProgress dexSaveProgress) {
 		DexBuilder dexBuilder = new DexBuilder(Opcodes.getDefault());
 		dexBuilder.setIgnoreMethodAndFieldError(true);
@@ -386,7 +388,7 @@ public class ClassTree {
 		
 	}
 	
-	
+    // save as file
 	public  void saveFile(byte[] bfile, String filePath) throws Exception {
 		BufferedOutputStream bos = null;
 		FileOutputStream fos = null;
@@ -408,6 +410,8 @@ public class ClassTree {
 			fos.close();
 		}
 	}
+    
+    // Read the file and convert it to bytes
 	public  byte[] read(String fileName) throws IOException {
 		InputStream is = new FileInputStream(fileName);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -420,19 +424,11 @@ public class ClassTree {
 		return bos.toByteArray();
 	}
 	
+    // static interface for getting dex saving progress 
 	public static interface DexSaveProgress {
-		
 		void onProgress(int progress, int total);
-		
 		void onMessage(String name);
 		
 	}
-	
-	public static interface SearchProgress {
-		
-		void onProgress(int progress, int total);
-		
-	}
-	
 	
 }
