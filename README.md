@@ -31,10 +31,10 @@ https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186
   
 # License and Usage Restrictions
 
-This project is released under the Apache License, Version 2.0. However, please note the following restrictions regarding the usage of this code:
+This project is released under the Apache License, Version 2.0. However, please note the following restriction regarding the usage of this code:
 
-- You are not permitted to use this code in private projects without prior authorization.
-- If you intend to use this code in a private project, please contact the project owner for permission.
+- You are strictly prohibited from using this code in private projects.
+- Contributions to this project are welcome within this repository only.
 
 For more details on the license terms and usage restrictions, please refer to the LICENSE file.
 
