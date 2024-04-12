@@ -29,6 +29,15 @@ https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186
 ## Join Telegram
 - [Coding Guys](https://t.me/coding_guys)
   
+# License and Usage Restrictions
+
+This project is released under the Apache License, Version 2.0. However, please note the following restrictions regarding the usage of this code:
+
+- You are not permitted to use this code in private projects without prior authorization.
+- If you intend to use this code in a private project, please contact the project owner for permission.
+
+For more details on the license terms and usage restrictions, please refer to the LICENSE file.
+
 # License
     Copyright (C) 2024 Krushna Chandra
 
