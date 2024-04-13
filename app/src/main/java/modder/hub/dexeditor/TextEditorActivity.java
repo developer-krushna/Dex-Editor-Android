@@ -93,8 +93,8 @@ import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import java.io.InputStreamReader;
-import org.eclipse.tm4e.core.registry.IThemeSourceMT;
-import org.eclipse.tm4e.core.registry.IGrammarSourceMT;
+import org.eclipse.tm4e.core.registry.IThemeSource;
+import org.eclipse.tm4e.core.registry.IGrammarSource;
 import org.eclipse.tm4e.core.registry.IThemeSource;
 import dalvik.system.*;
 import android.provider.Settings;
@@ -352,10 +352,10 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 		return super.onOptionsItemSelected(item);
 	}
 	
-    // You should rename the IThemSourceMT to it's actual name IThemSource
+    
 	private TextMateColorScheme getColorScheme(String themeName) {
 		try {
-			IThemeSource themeSource = IThemeSourceMT.fromInputStream(
+			IThemeSource themeSource = IThemeSource.fromInputStream(
 			getAssets().open("themes/"+themeName),
 			themeName,
 			null
@@ -369,15 +369,11 @@ public class TextEditorActivity extends AppCompatActivity implements  DialogLine
 	}
     
     
-	/* Here also rename the IGrammarSourceMT to actual name IGrammarSource
-    
-    *It was happened with me because of D8 Dexer
-    
-    */
+
 	private Language getSmaliLanguage(String themeName) {
 		try {
 			return TextMateLanguage.create(
-			IGrammarSourceMT.fromInputStream(
+			IGrammarSource.fromInputStream(
 			getAssets().open("smali/syntaxes/smali.tmLanguage.json"),
 			"smali.tmLanguage.json",
 			null
