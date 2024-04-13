@@ -23,7 +23,7 @@ https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186
 - [Timscriptov](https://github.com/timscriptov) for helping me in the development of Smali method flow diagram and also thanks for making server rest api ..I am really indebted to him ♥️
 
 - [Sora-Editor] for a beautiful Android TextEditor (https://github.com/Rosemoe/sora-editor)
-## My work
+## This project already used in My Project Modder Hub
 - [Download Modder Hub](https://modder-hub.blogspot.com)
 
 ## Join Telegram
