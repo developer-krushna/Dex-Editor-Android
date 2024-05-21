@@ -17,6 +17,9 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [x] Supported DEX version 40 and 41(Partially)
 ## Project build by 
 - [Sketchware Pro](https://github.com/Sketchware-Pro/Sketchware-Pro) , Java 11 version
+  ## Download sample app
+  -[Dex Editor +](https://t.me/MaharnaTech/83)
+  - Note: many features not included on this project repo due to some reason 
 ## Watch a quick video
 https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186-e789-44f6-bdc3-180fc3e3e0c9
 ## Special thanks to
