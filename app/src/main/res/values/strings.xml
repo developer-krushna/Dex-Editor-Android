@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="close_btn">Close</string>
+    <string name="error_title">Error</string>
+    <!-- strings.xml -->
+    <string name="select_all">Select All</string>
+    <string name="copy">Copy</string>
+    <string name="paste">Paste</string>
+    <string name="go_to">Go To</string>
+    <string name="translate">Translate</string>
+    <string name="cut">Cut</string>
+    <string name="long_select">Long Select</string>
+</resources>

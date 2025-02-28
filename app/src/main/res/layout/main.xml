@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/_coordinator"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <com.google.android.material.appbar.AppBarLayout
+        android:theme="@style/AppTheme.AppBarOverlay"
+        android:id="@+id/_app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/_toolbar"
+            android:background="?attr/colorPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:popupTheme="@style/AppTheme.PopupOverlay" />
+    </com.google.android.material.appbar.AppBarLayout>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        <com.google.android.material.textfield.TextInputLayout
+            android:orientation="vertical"
+            android:id="@+id/textinput1"
+            android:padding="4dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginRight="20dp"
+            android:layout_marginBottom="10dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <EditText
+                android:textSize="16sp"
+                android:textColor="#ff000000"
+                android:textColorHint="#ff607d8b"
+                android:layout_gravity="center_vertical"
+                android:id="@+id/edit_path"
+                android:padding="8dp"
+                android:focusable="true"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter dex path"
+                android:imeOptions="actionDone" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Button"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#ffffffff"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:id="@+id/materialbutton1"
+            android:padding="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pick .dex file"
+            app:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="8dp"
+            style="@style/Widget.MaterialComponents.Button" />
+        <com.google.android.material.button.MaterialButton
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Button"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#ffffffff"
+            android:gravity="center"
+            android:id="@+id/open_dex"
+            android:padding="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="20dp"
+            android:text="Open Dex Editor"
+            app:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="8dp"
+            style="@style/Widget.MaterialComponents.Button" />
+        <TextView
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#fff44336"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:id="@+id/textview1"
+            android:padding="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View Source Codes on GitHub" />
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

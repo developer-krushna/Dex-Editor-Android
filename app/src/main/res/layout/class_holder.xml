@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="horizontal"
+        android:id="@+id/linear_bg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginRight="5dp"
+        android:layout_marginBottom="2dp">
+        <LinearLayout
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:id="@+id/icon_background"
+            android:background="#ff252525"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginRight="4dp"
+            android:layout_marginBottom="4dp">
+            <ImageView
+                android:layout_gravity="center"
+                android:id="@+id/imageview1"
+                android:focusable="false"
+                android:visibility="gone"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/default_image"
+                android:scaleType="fitCenter" />
+            <TextView
+                android:textSize="14sp"
+                android:textColor="#ffffffff"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:id="@+id/smaliSymbol"
+                android:background="@android:color/transparent"
+                android:focusable="false"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="C" />
+        </LinearLayout>
+        <TextView
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:textColor="#ff000000"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:id="@+id/name"
+            android:padding="8dp"
+            android:focusable="false"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TextView" />
+    </LinearLayout>
+</LinearLayout>

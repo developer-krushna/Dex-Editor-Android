@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:id="@+id/panel_root"
+    android:background="@drawable/magnifier_background"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent">
+    <HorizontalScrollView
+        android:scrollbarSize="3dp"
+        android:id="@+id/panel_hv"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
+            <ImageButton
+                android:id="@+id/panel_btn_select_all"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_selectall_mt"
+                android:contentDescription="@string/select_all" />
+            <ImageButton
+                android:id="@+id/panel_btn_copy"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_copy_mt"
+                android:contentDescription="@string/copy" />
+            <ImageButton
+                android:id="@+id/panel_btn_paste"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_paste_mt"
+                android:contentDescription="@string/paste" />
+            <ImageButton
+                android:id="@+id/goto_btn"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_goto_mt"
+                android:contentDescription="@string/go_to" />
+            <ImageButton
+                android:id="@+id/translate_btn"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_translate_mt"
+                android:contentDescription="@string/translate" />
+            <ImageButton
+                android:id="@+id/panel_btn_cut"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_cut_mt"
+                android:contentDescription="@string/cut" />
+            <ImageButton
+                android:id="@+id/panel_btn_long_select"
+                android:background="?attr/selectableItemBackground"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_text_select_start_mt"
+                android:contentDescription="@string/long_select" />
+        </LinearLayout>
+    </HorizontalScrollView>
+</LinearLayout>

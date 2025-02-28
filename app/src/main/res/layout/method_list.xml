@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <LinearLayout
+        android:gravity="center"
+        android:layout_gravity="center"
+        android:orientation="horizontal"
+        android:id="@+id/linear_bg"
+        android:background="@drawable/item_background" 
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:id="@+id/indexName_container"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="13dp">
+            <TextView
+                android:textSize="14sp"
+                android:textColor="#ffffffff"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:id="@+id/indexName"
+                android:background="#ffe53935"
+                android:focusable="false"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="M" />
+        </LinearLayout>
+        <LinearLayout
+            android:gravity="center_vertical"
+            android:layout_gravity="center_vertical"
+            android:orientation="vertical"
+            android:id="@+id/linear3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:layout_weight="1.0">
+            <TextView
+                android:textSize="12sp"
+                android:textColor="#ff000000"
+                android:ellipsize="end"
+                android:id="@+id/method_name"
+                android:paddingRight="10dp"
+                android:focusable="false"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TextView"
+                android:maxLines="1" />
+            <TextView
+                android:textSize="11sp"
+                android:textColor="#ff000000"
+                android:ellipsize="end"
+                android:id="@+id/return_type"
+                android:paddingRight="10dp"
+                android:focusable="false"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="(Landroid/content/res/AssetFileDescriptor;)V"
+                android:maxLines="5" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

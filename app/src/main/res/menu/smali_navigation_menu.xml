@@ -1,0 +1,20 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/search"
+        android:title="Search"
+        android:visible="true"
+        android:icon="@drawable/ic_search_mt"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always" />
+    <item
+        app:showAsAction="always"
+        android:icon="@drawable/ic_swap"
+        android:id="@+id/strings_list"
+        android:title="Show Strings"/>    
+    <item
+        app:showAsAction="always"
+        android:icon="@drawable/ic_close_mt"
+        android:id="@+id/close"
+        android:title="Close"/>
+</menu>

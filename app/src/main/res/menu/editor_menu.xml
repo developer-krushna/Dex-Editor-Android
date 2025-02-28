@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:icon="@drawable/ic_navigation"
+        android:id="@+id/navigation"
+        android:title="Navigation"
+        app:showAsAction="always" />
+    <item
+        android:icon="@drawable/ic_undo_grey"
+        android:id="@+id/undo"
+        android:title="Undo"
+        app:showAsAction="always" />
+    <item
+        android:icon="@drawable/ic_redo_grey"
+        android:id="@+id/redo"
+        android:title="Redo"
+        app:showAsAction="always" />
+    <item
+        android:icon="@drawable/ic_save"
+        android:id="@+id/save"
+        android:title="Save"
+        app:showAsAction="always" />
+    <item
+        android:icon="@drawable/ic_java_mt"
+        android:id="@+id/smali2java"
+        android:title="Smali2Java"
+        app:showAsAction="always" />
+</menu>

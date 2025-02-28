@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/item_background.xml -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Layer 1: Ripple Effect -->
+    <item android:drawable="?attr/selectableItemBackground" />
+
+    <!-- Layer 2: Dynamic Background Color (initially transparent) -->
+    <item android:id="@+id/dynamic_background">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</layer-list>

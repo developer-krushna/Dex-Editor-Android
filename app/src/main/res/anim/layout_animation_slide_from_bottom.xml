@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a modified version of AXMLPrinter2(By Google) library. Check out how many changes are made at https://github.com/developer-krushna/AXMLPrinter by (@developer-krushna) -->
+<layoutAnimation xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/linear"
+    android:delay="15.0%"
+    android:animation="@anim/slide_from_bottom"
+    android:animationOrder="normal" />

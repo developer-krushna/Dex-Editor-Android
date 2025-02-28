@@ -1,0 +1,41 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/linear1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="0dp"
+        android:orientation="vertical"
+        android:background="@drawable/dialog_rounded_bg">
+
+        <!-- Toolbar for navigation and search -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            app:popupTheme="@style/AppTheme.PopupOverlay" />
+
+        <!-- RecyclerView to display the list of methods/fields -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerview_method_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="0dp"
+            tools:listitem="@layout/method_list" />
+         <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerview_strings_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:padding="0dp"
+            tools:listitem="@layout/string_list" />   
+    </LinearLayout>
+</LinearLayout>
