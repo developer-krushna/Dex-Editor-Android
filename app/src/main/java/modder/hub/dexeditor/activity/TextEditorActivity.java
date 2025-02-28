@@ -102,8 +102,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import modder.hub.dexeditor.fragment.SmaliMethodListFragment;
 import modder.hub.dexeditor.smali.Smali2Java;
-import org.eclipse.tm4e.core.registry.IGrammarSourceMT;
-import org.eclipse.tm4e.core.registry.IThemeSourceMT;
+import org.eclipse.tm4e.core.registry.IGrammarSource;
+import org.eclipse.tm4e.core.registry.IThemeSource;
 import modder.hub.dexeditor.views.*;
 import modder.hub.dexeditor.utils.*;
 import modder.hub.dexeditor.R;
@@ -1110,7 +1110,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private TextMateColorScheme getColorScheme(String themeName) {
 		try {
 			AssetManager assets = getAssets();
-			return TextMateColorScheme.create(IThemeSourceMT.fromInputStream(assets.open("themes/" + themeName), themeName, null));
+			return TextMateColorScheme.create(IThemeSource.fromInputStream(assets.open("themes/" + themeName), themeName, null));
 		} catch (Exception ignored) {
 			return null;
 		}
@@ -1119,7 +1119,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private Language getSmaliLanguage(String themeName) {
 		try {
 			return TextMateLanguage.create(
-			IGrammarSourceMT.fromInputStream(getAssets().open("smali/syntaxes/smali.tmLanguage.json"), "smali.tmLanguage.json", null),
+			IGrammarSource.fromInputStream(getAssets().open("smali/syntaxes/smali.tmLanguage.json"), "smali.tmLanguage.json", null),
 			new InputStreamReader(getAssets().open("smali/language-configuration.json")),
 			getColorScheme(themeName).getThemeSource()
 			);
