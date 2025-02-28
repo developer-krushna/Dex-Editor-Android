@@ -5,16 +5,25 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [JADX](https://github.com/skylot/jadx)
 
 ## Available features 
-- [x] Smali navigation.
+- [x] Smali navigation (methods, fields and strings list)
 - [x] Decompile single smali classes 
-- [x] Decompiling single method bodies to java
+- [x] Decompiling single smali method bodies to java
 - [x] Batch class deletion
 - [x] Smali method flow diagram
-- [x] Editing Smali with best code editor 
+- [x] Editing Smali with best code editor
+- [x] Jump to another class
+- [x] Custom editor selection menu (Calling translation apps)
 - [x] Dex compilation with real time progress update
 - [x] Supported propper error handling during smali compilation 
 - [x] Enhancement in smali library 
 - [x] Supported DEX version 40 and 41(Partially)
+- [x] Working on android api 21 (only my build apk)
+## To-Do
+- [ ] Multi Dex Support
+- [ ] New Java decompilers
+- [ ] Multi smali class editor
+- [ ] Removing debug items
+- [ ] Batch Insertion and extraction of classes
 ## Project build by 
 - [Sketchware Pro](https://github.com/Sketchware-Pro/Sketchware-Pro) , Java 11 version
   ### Download sample app
