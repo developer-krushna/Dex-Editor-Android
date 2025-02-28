@@ -1,38 +1,37 @@
-
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
- * Copyright 2024, developer-krushna
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of developer-krushna nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
- */
+* Dex-Editor-Android an Advanced Dex Editor for Android 
+* Copyright 2024, developer-krushna
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*
+*     * Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above
+* copyright notice, this list of conditions and the following disclaimer
+* in the documentation and/or other materials provided with the
+* distribution.
+*     * Neither the name of developer-krushna nor the names of its
+* contributors may be used to endorse or promote products derived from
+* this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+* OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+*     Please contact Krushna by email mt.modder.hub@gmail.com if you need
+*     additional information or have any questions
+*/
 
 package modder.hub.dexeditor.fragment;
 
@@ -97,7 +96,7 @@ import me.zhanghai.android.fastscroll.*;
 
 /*
 Author @developer-krushna
-Code fixed comments by ChatGPT
+Code fixed and comments by ChatGPT
 */
 
 
@@ -230,14 +229,18 @@ public class SmaliMethodListFragment extends DialogFragment {
 					return true;
 				}
 				if (item.getItemId() == R.id.strings_list) {
-					if (stringsRecyclerView.getVisibility() == View.VISIBLE) {
-						ViewAnimationHelper.hideViewAndShowViewWithAnimation(stringsRecyclerView, methodRecyclerView);
-						item.setTitle("Show Strings");
-						wasStringsVisible = false;
+					if(stringListInfo.size() != 0){
+						if (stringsRecyclerView.getVisibility() == View.VISIBLE) {
+							ViewAnimationHelper.hideViewAndShowViewWithAnimation(stringsRecyclerView, methodRecyclerView);
+							item.setTitle("Show Strings");
+							wasStringsVisible = false;
+						} else {
+							ViewAnimationHelper.hideViewAndShowViewWithAnimation(methodRecyclerView, stringsRecyclerView);
+							item.setTitle("Show Methods");
+							wasStringsVisible = true;
+						}
 					} else {
-						ViewAnimationHelper.hideViewAndShowViewWithAnimation(methodRecyclerView, stringsRecyclerView);
-						item.setTitle("Show Methods");
-						wasStringsVisible = true;
+						SketchwareUtil.showMessage(getActivity(), "No strings found");
 					}
 					return true;
 				}
@@ -247,22 +250,22 @@ public class SmaliMethodListFragment extends DialogFragment {
 	}
 	
 	@Override
-    public void onStart() {
-        super.onStart();
-        Dialog dialog = getDialog();
-        if (dialog != null) {
-            // Get screen dimensions
-            DisplayMetrics displayMetrics = new DisplayMetrics();
-            getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-            
-            // Set fixed width and height (e.g., 80% of screen width and 70% of screen height)
-            int dialogWidth = (int) (displayMetrics.widthPixels * 0.8);  // 80% of screen width
-            int dialogHeight = (int) (displayMetrics.heightPixels * 0.8); // 70% of screen height
-
-            dialog.getWindow().setLayout(dialogWidth, dialogHeight);
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-    }
+	public void onStart() {
+		super.onStart();
+		Dialog dialog = getDialog();
+		if (dialog != null) {
+			// Get screen dimensions
+			DisplayMetrics displayMetrics = new DisplayMetrics();
+			getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+			
+			// Set fixed width and height (e.g., 80% of screen width and 70% of screen height)
+			int dialogWidth = (int) (displayMetrics.widthPixels * 0.8);  // 80% of screen width
+			int dialogHeight = (int) (displayMetrics.heightPixels * 0.8); // 70% of screen height
+			
+			dialog.getWindow().setLayout(dialogWidth, dialogHeight);
+			dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+		}
+	}
 	
 	private void saveCurrentState() {
 		// Save RecyclerView scroll states
