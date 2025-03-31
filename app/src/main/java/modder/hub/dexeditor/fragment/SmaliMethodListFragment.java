@@ -1,3 +1,4 @@
+
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
 * Copyright 2024, developer-krushna
@@ -96,7 +97,7 @@ import me.zhanghai.android.fastscroll.*;
 
 /*
 Author @developer-krushna
-Code fixed and comments by ChatGPT
+Code fixed comments by ChatGPT
 */
 
 
@@ -254,15 +255,15 @@ public class SmaliMethodListFragment extends DialogFragment {
 		super.onStart();
 		Dialog dialog = getDialog();
 		if (dialog != null) {
-			// Get screen dimensions
+			// Get screen width
 			DisplayMetrics displayMetrics = new DisplayMetrics();
 			getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 			
-			// Set fixed width and height (e.g., 80% of screen width and 70% of screen height)
-			int dialogWidth = (int) (displayMetrics.widthPixels * 0.8);  // 80% of screen width
-			int dialogHeight = (int) (displayMetrics.heightPixels * 0.8); // 70% of screen height
+			// Set fixed width (80% of screen width)
+			int dialogWidth = (int) (displayMetrics.widthPixels * 0.8);
 			
-			dialog.getWindow().setLayout(dialogWidth, dialogHeight);
+			// Height will WRAP_CONTENT automatically
+			dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
 			dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 		}
 	}
@@ -313,7 +314,6 @@ public class SmaliMethodListFragment extends DialogFragment {
 			List<HashMap<String, Object>> methodInfoList = new ArrayList<>();
 			List<HashMap<String, Object>> fieldInfoList = new ArrayList<>();
 			List<HashMap<String, Object>> classInfoList = new ArrayList<>();
-			
 			List<HashMap<String, Object>> stringList = new ArrayList<>();
 			
 			BufferedReader smaliFileReader = null;
@@ -324,6 +324,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 				int currentLineNumber = 0;
 				boolean isInsideMethod = false;
 				String currentMethodName = "";
+				String currentFullMethodSignature = "";
 				int methodStartLine = -1;
 				
 				// Read the smali file line by line
@@ -357,6 +358,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 					if (tokens[0].equals(".method")) {
 						isInsideMethod = true;
 						currentMethodName = tokens[tokens.length - 1]; // Last token is the method name
+						currentFullMethodSignature = currentLine.trim(); // Store full method signature
 						methodStartLine = currentLineNumber;
 					}
 					// Check if the line ends a method
@@ -364,7 +366,8 @@ public class SmaliMethodListFragment extends DialogFragment {
 						if (isInsideMethod && methodStartLine != -1) {
 							// Create a method info entry
 							HashMap<String, Object> methodInfo = new HashMap<>();
-							methodInfo.put("MethodOrFieldName", currentMethodName);
+							methodInfo.put("MethodOrFieldName", currentMethodName); // Original behavior
+							methodInfo.put("FullMethodOrField", currentFullMethodSignature); // New full signature
 							methodInfo.put("StartLineNumber", methodStartLine);
 							methodInfo.put("EndLineNumber", currentLineNumber);
 							methodInfoList.add(methodInfo);
@@ -372,6 +375,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 							// Reset method tracking variables
 							isInsideMethod = false;
 							currentMethodName = "";
+							currentFullMethodSignature = "";
 							methodStartLine = -1;
 						}
 					}
@@ -383,16 +387,21 @@ public class SmaliMethodListFragment extends DialogFragment {
 							String fieldName = fieldSignature.substring(0, colonIndex).trim();
 							
 							HashMap<String, Object> fieldInfo = new HashMap<>();
-							fieldInfo.put("MethodOrFieldName", String.valueOf(fieldName.substring(fieldName.lastIndexOf(32) + 1)) + ":" + fieldSignature.substring(colonIndex + 1).trim());
-							fieldInfo.put("StartLineNumber", currentLineNumber); // Add the line number
-							fieldInfoList.add(fieldInfo); // Add to the list
+							// Original behavior
+							fieldInfo.put("MethodOrFieldName", 
+							String.valueOf(fieldName.substring(fieldName.lastIndexOf(32) + 1)) + 
+							":" + fieldSignature.substring(colonIndex + 1).trim());
+							// New full signature
+							fieldInfo.put("FullMethodOrField", currentLine.trim());
+							fieldInfo.put("StartLineNumber", currentLineNumber);
+							fieldInfoList.add(fieldInfo);
 						}
 					}
 					
 					// Check if the line defines a class
-					else if (tokens[0].equals(".class") && currentLineNumber == 1) {
+					else if (tokens[0].equals(".class") && currentLineNumber == 1 && trimmedLine.endsWith(";")) {
 						String className = tokens[tokens.length - 1]; // Last token is the class name
-						
+						fullClassName = className;
 						// Read the next line to check for the superclass
 						String nextLine = smaliFileReader.readLine();
 						if (nextLine != null && nextLine.trim().startsWith(".super")) {
@@ -401,7 +410,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 							// Create a class info entry
 							HashMap<String, Object> classInfo = new HashMap<>();
 							classInfo.put("MethodOrFieldName", className);
-							classInfo.put("StartLineNumber", currentLineNumber);
+							classInfo.put("StartLineNumber", (currentLineNumber - 1));
 							classInfo.put("SuperClass", superClassName);
 							classInfoList.add(classInfo);
 						}
@@ -430,6 +439,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 			return parsedDataMap;
 		}
 		
+		
 		@Override
 		protected void onPostExecute(Map<String, List<HashMap<String, Object>>> parsedDataMap) {
 			if (parsedDataMap != null && !parsedDataMap.isEmpty()) {
@@ -442,6 +452,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 				stringListInfo.addAll(parsedDataMap.get("StringInfo"));
 				
 				savedMethodData = new Gson().toJson(methodOrFieldInfo);
+				
 				savedStringsData = new Gson().toJson(stringListInfo);
 				
 				methodRecyclerView.setAdapter(new MethodListAdapter(methodOrFieldInfo));
@@ -453,12 +464,25 @@ public class SmaliMethodListFragment extends DialogFragment {
 				
 				// Step 1: Find position in methodOrFieldInfo
 				for (int i = 0; i < methodOrFieldInfo.size(); i++) {
-					String startLineNumber = methodOrFieldInfo.get(i).get("StartLineNumber").toString();
+					Map<String, Object> item = methodOrFieldInfo.get(i);
+					String startLineNumber = item.get("StartLineNumber").toString();
 					int startLine = (int) Math.floor(Double.parseDouble(startLineNumber));
-					if (editorLineNumber == startLine) {
-						methodPositionToScroll = i;
-						break;
+					
+					if (item.containsKey("EndLineNumber")) {
+						// This is a method - check line range
+						String endLineNumber = item.get("EndLineNumber").toString();
+						int endLine = (int) Math.floor(Double.parseDouble(endLineNumber));
+						if (editorLineNumber >= startLine && editorLineNumber <= endLine) {
+							methodPositionToScroll = i;
+							break;
+						}
+					} else {
+						if (editorLineNumber == startLine) {
+							methodPositionToScroll = i;
+							break;
+						}
 					}
+					
 				}
 				
 				// Step 2: Find position in stringListInfo
@@ -617,57 +641,110 @@ public class SmaliMethodListFragment extends DialogFragment {
 			holder.backgroundLayout.setOnLongClickListener(new View.OnLongClickListener() {
 				@Override
 				public boolean onLongClick(View _view) {
+					// Get the method or field name from the clicked position
 					final String methodOrFieldName = methodOrFieldInfo.get(position).get("MethodOrFieldName").toString();
+					
+					// Create a popup menu attached to the clicked view
 					PopupMenu popupMenu = new PopupMenu(getActivity(), _view);
 					Menu menu = popupMenu.getMenu();
 					
+					// Check if this is a class signature (starts with L and ends with ;)
 					if (methodOrFieldName.startsWith("L") && methodOrFieldName.endsWith(";")) {
 						menu.add(1, 1, 1, "Copy class signature");
 						menu.add(2, 2, 2, "Copy subclass signature");
 					}
+					
+					// Check if this is a field (contains :)
 					if (methodOrFieldName.contains(":")) {
 						menu.add(3, 3, 3, "Copy field signature");
-					}
-					if (methodOrFieldName.contains("(") && !methodOrFieldName.contains(":")) {
-						menu.add(4, 4, 4, "Copy method signature");
-						menu.add(5, 5, 5, "View flowchart");
-						menu.add(6, 6, 6, "Smali to Java");
+						menu.add(9, 9, 9, "Copy field get code");  // Generate smali get instruction
+						menu.add(10, 10, 10, "Copy field put code"); // Generate smali put instruction
 					}
 					
+					// Check if this is a method (contains ( but not :)
+					if (methodOrFieldName.contains("(") && !methodOrFieldName.contains(":")) {
+						menu.add(4, 4, 4, "Copy method signature");
+						menu.add(5, 5, 5, "Copy method code");      // Get full method body
+						menu.add(6, 6, 6, "Copy method invoke code"); // Generate invoke instruction
+						menu.add(7, 7, 7, "View flowchart");       // Show method flowchart
+						menu.add(8, 8, 8, "Smali to Java");        // Convert smali to Java
+					}
+					
+					// Set click listener for popup menu items
 					popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
 						@Override
-						public boolean onMenuItemClick(MenuItem item) {
-							switch (item.getItemId()) {
-								case 1:
+						public boolean onMenuItemClick(MenuItem menuItem) {
+							switch (menuItem.getItemId()) {
+								case 1:  // Copy class signature
 								copiedToClipboard(methodOrFieldName);
 								return true;
-								case 2:
+								
+								case 2:  // Copy subclass signature
 								copiedToClipboard(methodOrFieldInfo.get(position).get("SuperClass").toString());
 								return true;
-								case 3:
+								
+								case 3:  // Copy field signature
 								String fieldSignature = fullClassName + smaliCallSyntax + methodOrFieldName;
+								// Clean up the signature by removing extra parts after space
 								int spaceIndex = fieldSignature.indexOf(" ");
 								if (spaceIndex != -1) {
 									fieldSignature = fieldSignature.substring(0, spaceIndex);
 								}
 								copiedToClipboard(fieldSignature);
 								return true;
-								case 4:
+								
+								case 4:  // Copy method signature
 								copiedToClipboard(fullClassName + smaliCallSyntax + methodOrFieldName);
 								return true;
-								case 5:
+								
+								case 5:  // Copy method code
+								// Parse and copy the full method body from smali file
+								SmaliMethodBody smaliMethodBody = new SmaliMethodBody(
+								smaliFilePath, 
+								new String[]{methodOrFieldInfo.get(position).get("MethodOrFieldName").toString()}, 
+								false
+								);
+								copiedToClipboard(smaliMethodBody.parseClassInSmali());
+								return true;
+								
+								case 6:  // Copy method invoke code
+								// Generate and copy smali invoke instruction
+								SmaliMethodInvokeParser parser = new SmaliMethodInvokeParser(fullClassName);
+								copiedToClipboard(parser.generateInvokeCode(
+								item.get("FullMethodOrField").toString(), 
+								"v0"  // Using register v0
+								));
+								return true;
+								
+								case 7:  // View flowchart
 								methodFlowChart(methodOrFieldInfo.get(position).get("MethodOrFieldName").toString());
 								return true;
-								case 6:
+								
+								case 8:  // Smali to Java
 								smali2Java(methodOrFieldInfo.get(position).get("MethodOrFieldName").toString());
 								return true;
+								
+								case 9:  // Copy field get code
+								// Generate and copy smali get instruction for field
+								SmaliFieldAccessParser parser2 = new SmaliFieldAccessParser(fullClassName);
+								copiedToClipboard(parser2.generateGetCode(item.get("FullMethodOrField").toString()));
+								return true;
+								
+								case 10:  // Copy field put code
+								// Generate and copy smali put instruction for field
+								SmaliFieldAccessParser parser3 = new SmaliFieldAccessParser(fullClassName);
+								copiedToClipboard(parser3.generatePutCode(item.get("FullMethodOrField").toString()));
+								return true;
+								
 								default:
 								return false;
 							}
 						}
 					});
+					
+					// Show the popup menu
 					popupMenu.show();
-					return true;
+					return true;  // Consume the long click event
 				}
 			});
 			
@@ -680,10 +757,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 				}
 			});
 			
-			
 		}
-		
-		
 		
 		@Override
 		public int getItemCount() {
@@ -835,7 +909,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 				protected String doInBackground(Void... voids) {
 					try {
 						// Parse the Smali method and convert it to Java
-						SmaliMethodBody smaliMethodBody = new SmaliMethodBody(smaliFilePath, new String[]{methodName});
+						SmaliMethodBody smaliMethodBody = new SmaliMethodBody(smaliFilePath, new String[]{methodName}, true);
 						return Smali2Java.translate(smaliMethodBody.parseClassInSmali(), dexVersion);
 					} catch (Exception e) {
 						showProgressDialog(false); // Hide progress dialog on error
