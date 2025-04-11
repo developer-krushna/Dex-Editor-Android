@@ -1,5 +1,5 @@
 <resources>
-	<style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar.Bridge">
+	<style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
 		<item name="colorOnPrimary">@android:color/white</item>
 		<item name="colorPrimary">@color/colorPrimary</item>
 		<item name="colorPrimaryDark">@color/colorPrimaryDark</item>
