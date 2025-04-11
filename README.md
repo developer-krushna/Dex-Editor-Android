@@ -15,7 +15,8 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [x] Custom editor selection menu (Calling translation apps)
 - [x] Dex compilation with real time progress update
 - [x] Supported propper error handling during smali compilation 
-- [x] Enhancement in smali library 
+- [x] Enhancement in smali library
+- [x] Full featured Smali Editor 
 - [x] Supported DEX version 40 and 41(Partially)
 - [x] Working on android api 21 (only my build apk)
 ## To-Do
@@ -53,7 +54,7 @@ This project is released under the Apache License, Version 2.0. However, please 
 For more details on the license terms and usage restrictions, please refer to the LICENSE file.
 
 # License
-    Copyright (C) 2024 Krushna Chandra
+    Copyright (C) 2024-25 Krushna Chandra
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
