@@ -23,8 +23,94 @@
         android:title="Save"
         app:showAsAction="always" />
     <item
-        android:icon="@drawable/ic_java_mt"
-        android:id="@+id/smali2java"
-        android:title="Smali2Java"
-        app:showAsAction="always" />
+        app:showAsAction="always"
+        android:icon="@drawable/ic_edit_mt"
+        android:id="@+id/edit_menu"
+        android:title="Edit">
+        <menu>
+            <item
+                android:id="@+id/copy_line"
+                android:icon="@drawable/ic_copy_mt"
+                android:title="Copy line" />
+            <item
+                android:id="@+id/cut_line"
+                android:icon="@drawable/ic_cut_mt"
+                android:title="Cut line" />
+            <item
+                android:id="@+id/delete_line"
+                android:icon="@drawable/ic_delete_mt"
+                android:title="Delete line" />
+            <item
+                android:id="@+id/empty_line"
+                android:icon="@drawable/ic_empty_mt"
+                android:title="Empty line" />
+            <item
+                android:id="@+id/replace_line"
+                android:icon="@drawable/ic_replace_mt"
+                android:title="Replace line" />
+            <item
+                android:id="@+id/duplicate_line"
+                android:icon="@drawable/ic_duplicate_mt"
+                android:title="Duplicate line" />
+            <item
+                android:id="@+id/convert_uppercase"
+                android:icon="@drawable/ic_uppercase_mt"
+                android:title="Convert to uppercase" />
+            <item
+                android:id="@+id/convert_lowercase"
+                android:icon="@drawable/ic_lowercase_mt"
+                android:title="Convert to lowercase" />
+            <item
+                android:id="@+id/increase_indent"
+                android:icon="@drawable/ic_right_arrow_mt"
+                android:title="Increase Indent" />
+            <item
+                android:id="@+id/decrease_indent"
+                android:icon="@drawable/ic_left_arrow_mt"
+                android:title="Decrease Indent" />
+            <item
+                android:id="@+id/toggle_comment"
+                android:icon="@drawable/ic_hash_mt"
+                android:title="Toggle comment" />
+        </menu>
+    </item>
+    <item
+        app:showAsAction="always"
+        android:icon="@drawable/ic_more_mt"
+        android:title="More">
+        <menu>
+            <item
+                android:id="@+id/smali2java"
+                android:icon="@drawable/ic_java_mt"
+                android:title="Smali to Java" />
+            <item
+                android:id="@+id/smali_instruction"
+                android:icon="@drawable/ic_instruction_query_mt"
+                android:title="Instructions query" />    
+            <item
+                android:id="@+id/jumpToLine"
+                android:icon="@drawable/ic_jump_line_mt"
+                android:title="Jump to line" />
+            <group android:checkableBehavior="all">
+                <item
+                    android:id="@+id/wrap_text"
+                    android:icon="@drawable/ic_wrap_text_mt"
+                    android:checked="false"
+                    android:title="Wrap word" />
+                <item
+                    android:id="@+id/read_only"
+                    android:icon="@drawable/ic_eye_mt"
+                    android:checked="false"
+                    android:title="Read-only mode" />
+            </group>
+            <item
+                android:id="@+id/preference"
+                android:icon="@drawable/ic_setting_mt"
+                android:title="Preference" />
+            <item
+                android:id="@+id/close"
+                android:icon="@drawable/ic_close_mt"
+                android:title="Close" />
+        </menu>
+    </item>
 </menu>
