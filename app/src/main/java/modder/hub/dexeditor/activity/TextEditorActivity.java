@@ -1,89 +1,85 @@
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
- * Copyright 2024, developer-krushna
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of developer-krushna nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
- */
+* Dex-Editor-Android an Advanced Dex Editor for Android 
+* Copyright 2024-25, developer-krushna
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*
+*     * Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above
+* copyright notice, this list of conditions and the following disclaimer
+* in the documentation and/or other materials provided with the
+* distribution.
+*     * Neither the name of developer-krushna nor the names of its
+* contributors may be used to endorse or promote products derived from
+* this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+* OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+*     Please contact Krushna by email mt.modder.hub@gmail.com if you need
+*     additional information or have any questions
+*/
 
 
 package modder.hub.dexeditor.activity;
 
+import android.Manifest;
+import android.animation.*;
+import android.app.*;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.*;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.AssetManager;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
-import android.os.Parcel;
-import android.os.Parcelable; 
-import android.os.SystemClock;
-import android.text.SpannableString;
-import android.text.TextPaint;
+import android.content.res.*;
+import android.graphics.*;
+import android.graphics.drawable.*;
+import android.media.*;
+import android.net.*;
+import android.os.*;
+import android.text.*;
 import android.text.method.LinkMovementMethod;
-import android.text.style.ClickableSpan;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.text.style.*;
 import android.util.*;
+import android.view.*;
+import android.view.View.*;
+import android.view.animation.*;
+import android.webkit.*;
+import android.widget.*;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
+
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali2;
+
 import com.blogspot.atifsoftwares.animatoolib.Animatoo;
+
 import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.textfield.TextInputLayout;
+
 import io.github.rosemoe.sora.event.ContentChangeEvent;
+import io.github.rosemoe.sora.event.*;
 import io.github.rosemoe.sora.event.Event;
 import io.github.rosemoe.sora.event.EventReceiver;
 import io.github.rosemoe.sora.event.Unsubscribe;
@@ -93,20 +89,27 @@ import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
 import io.github.rosemoe.sora.text.Cursor;
+import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
+import io.github.rosemoe.sora.widget.component.EditorBuiltinComponent;
+import io.github.rosemoe.sora.text.Content;
+
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import modder.hub.dexeditor.fragment.SmaliMethodListFragment;
+
+import modder.hub.dexeditor.fragment.*;
 import modder.hub.dexeditor.smali.Smali2Java;
-import org.eclipse.tm4e.core.registry.IGrammarSource;
-import org.eclipse.tm4e.core.registry.IThemeSource;
 import modder.hub.dexeditor.views.*;
 import modder.hub.dexeditor.utils.*;
 import modder.hub.dexeditor.R;
+
+
+import org.eclipse.tm4e.core.registry.IGrammarSourceMT;
+import org.eclipse.tm4e.core.registry.IThemeSourceMT;
 
 
 /*
@@ -129,7 +132,15 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private SharedPreferences.Editor preferencesEditor;
 	private MenuItem redoMenuItem;
 	private SharedPreferences sharedPreferences;
+	
 	private CodeEditor smaliEditor;
+	private LinearLayout linearHeader;
+	private LinearLayout linearLeft;
+	private TextView textviewLeft;
+	private LinearLayout linearRight;
+	private TextView textviewLineNo;
+	private TextView methodName;
+	
 	private TimerTask timerTask;
 	private MenuItem undoMenuItem;
 	private Timer timer = new Timer();
@@ -151,6 +162,12 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	
 	
 	private SharedPreferences dexPref;
+	private SharedPreferences editorPrefs;
+	
+	
+	private String savedFont = "normal";
+	private boolean isReload = false;
+	
 	
 	public interface FileSaveCallback {
 		void onFileSaved(String filePath);
@@ -180,30 +197,117 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		appBarLayout = findViewById(R.id._app_bar);
 		coordinatorLayout = findViewById(R.id._coordinator);
 		toolbar = findViewById(R.id._toolbar);
+		
+		linearHeader = findViewById(R.id.linear_header);
+		linearLeft = findViewById(R.id.linear_left);
+		textviewLeft = findViewById(R.id.textview_left);
+		linearRight = findViewById(R.id.linear_right);
+		textviewLineNo = findViewById(R.id.textview_lineNo);
+		methodName = findViewById(R.id.methodName);
+		
+		
 		setSupportActionBar(toolbar);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		getSupportActionBar().setHomeButtonEnabled(true);
-		toolbar.setNavigationOnClickListener(new NavigationOnClickListener());
+		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				onBackPressed();
+			}
+		});
 		smaliEditor = findViewById(R.id.smali_editor);
 		sharedPreferences = getSharedPreferences("SelectedTranslationPackageName", 0);
 		preferencesEditor = sharedPreferences.edit();
 		packageManager = getPackageManager();
 		
 		dexPref = getSharedPreferences("dexPref", Activity.MODE_PRIVATE);
+		editorPrefs = getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
+		
+		linearLeft.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				PopupMenu popupMenu = new PopupMenu(TextEditorActivity.this, view);
+				Menu menu = popupMenu.getMenu();
+				menu.add(1, 1, 1, currentTitle);
+				menu.add(2, 2, 2, Smali2JavaName2(intentClassName));
+				menu.add(3, 3, 3, intentClassName);
+				menu.add(4, 4, 4, "L" + intentClassName + ";");
+				
+				popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem menuItem) {
+						copiedToClipboard(menuItem.getTitle().toString());
+						return true;
+					}
+				});
+				
+				popupMenu.show();
+			}
+		});
+		
+		linearRight.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				runOnUiThread(new MethodListRunnable());
+			}
+		}); 
 	}
 	
 	private void initializeLogic() {
-		setTitle("Smali Editor");
-		isEditMode = false;
+		setTitle("");
 		tempSmaliPath = getFilesDir() + "/tmp.smali";
-		smaliEditor.setTextSize(14.0f);
-		smaliEditor.setLineSpacing(2.0f, 1.1f);
-		smaliEditor.setLineNumberMarginLeft(1.1f);
-		smaliEditor.setTypefaceLineNumber(Typeface.DEFAULT);
+		savedFont  = SettingsFragment.getFontType(this);
+		cursor = smaliEditor.getCursor();
+		
+		SmaliInstructionHelper.init(getApplicationContext());
+		
+		loadEditorSettings(true);
 		loadTheme();
 		handleSmaliIntent();
-		smaliEditor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(smaliEditor, new TextActionCallback(Smali2JavaName2(intentClassName))));
-		smaliEditor.subscribeEvent(ContentChangeEvent.class, new ContentChangeEventListener());
+		
+		smaliEditor.subscribeEvent(ContentChangeEvent.class, new EventReceiver<ContentChangeEvent>() {
+			@Override
+			public void onReceive(ContentChangeEvent event, Unsubscribe unsubscribe) {
+				handleUndoRedo();
+				if(!isReload){
+					Cursor cursor = smaliEditor.getCursor();
+					int position = cursor.getLeftLine();
+					editorPrefs.edit().putInt("lineNo", position).commit();
+				}
+				if (!saveEvent.isEmpty()) {
+					isEditMode = true;
+					isFileCreated = "";
+				}
+				saveEvent = "Saved";
+				isReload = false;
+			}
+		});
+		
+		smaliEditor.subscribeEvent(SelectionChangeEvent.class, new EventReceiver<SelectionChangeEvent>() {
+			@Override
+			public void onReceive(SelectionChangeEvent event, Unsubscribe unsubscribe) {
+				Cursor cursor = smaliEditor.getCursor();
+				CharSequence text = smaliEditor.getText();
+				
+				int line = cursor.getLeftLine() + 1;
+				int column = cursor.getLeftColumn() + 1;
+				
+				StringBuilder positionText = new StringBuilder();
+				positionText.append(String.format("%d:%d", line, column));
+				
+				if (cursor.isSelected()) {
+					String selectedText = text.subSequence(
+					cursor.getLeft(), 
+					cursor.getRight()).toString();
+					positionText.append(" (").append(selectedText.length()).append(")");
+				}
+				
+				textviewLineNo.setText(positionText.toString());
+				
+				String currentElement = SmaliCursorUtils.getCurrentMethodOrFieldName(text, cursor.getLeftLine());
+				methodName.setText(currentElement != null ? currentElement : "...");
+			}
+		});
 	}
 	
 	
@@ -261,24 +365,204 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
-	private class NavigationOnClickListener implements View.OnClickListener {
-		@Override
-		public void onClick(View view) {
-			onBackPressed();
-		}
+	@Override
+	public void onResume() {
+		super.onResume();
+		loadEditorSettings(false);
 	}
 	
-	private class ContentChangeEventListener implements EventReceiver<ContentChangeEvent> {
-		@Override
-		public void onReceive(ContentChangeEvent event, Unsubscribe unsubscribe) {
-			handleUndoRedo();
-			if (!saveEvent.isEmpty()) {
-				isEditMode = true;
-				isFileCreated = "";
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		this.menu = menu;
+		getMenuInflater().inflate(R.menu.editor_menu, menu);
+		undoMenuItem = menu.findItem(R.id.undo);
+		redoMenuItem = menu.findItem(R.id.redo);
+		menu.findItem(R.id.wrap_text).setCheckable(true).setChecked(editorPrefs.getBoolean("wrap_text", false));
+		menu.findItem(R.id.edit_menu);
+		new Handler().postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				View saveView = findViewById(R.id.save);
+				if (saveView != null) {
+					saveView.setOnLongClickListener(new View.OnLongClickListener() {
+						@Override
+						public boolean onLongClick(View view) {
+							if (saveCompileError.isEmpty()) {
+								return true;
+							}
+							showPreviousErrorDlg(saveCompileError);
+							return true;
+						}
+					});
+				} else {
+				}
 			}
-			saveEvent = "Saved";
-		}
+		}, 100); // 100ms delay
+		
+		return super.onCreateOptionsMenu(menu);
 	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		Cursor cursor = smaliEditor.getCursor();
+		switch (item.getItemId()) {
+			case R.id.redo:
+			smaliEditor.redo();
+			handleUndoRedo();
+			dismissEditorWindow();
+			break;
+			case R.id.undo:
+			smaliEditor.undo();
+			handleUndoRedo();
+			dismissEditorWindow();
+			break;
+			case R.id.save:
+			if (isEditMode) {
+				saveFile(false);
+			}
+			break;
+			case R.id.navigation:
+			runOnUiThread(new MethodListRunnable());
+			break;
+			case R.id.smali2java:
+			runOnUiThread(new SmaliToJavaRunnable());
+			break;
+			case R.id.preference:
+			startActivity(new Intent(TextEditorActivity.this, SettingsActivity.class));
+			break;
+			case R.id.jumpToLine:
+			jumpToLine();
+			break;
+			case R.id.close:
+			onBackPressed();
+			break;
+			case R.id.wrap_text:
+			if (item.isChecked()) {
+				item.setChecked(false);
+				editorPrefs.edit().putBoolean("wrap_text", false).commit();
+				smaliEditor.setWordwrap(false);
+			}
+			else {
+				item.setChecked(true);
+				editorPrefs.edit().putBoolean("wrap_text", true).commit();
+				smaliEditor.setWordwrap(true);
+			}
+			return true;
+			case R.id.read_only:
+			if (item.isChecked()) {
+				item.setChecked(false);
+				smaliEditor.setEditable(true);
+				menu.findItem(R.id.edit_menu).setEnabled(true);
+			}
+			else {
+				item.setChecked(true);
+				smaliEditor.setEditable(false);
+				menu.findItem(R.id.edit_menu).setEnabled(false);
+			}
+			return true;
+			
+			case R.id.delete_line:
+			deleteLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.empty_line:
+			emptyLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.replace_line:
+			replaceLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.duplicate_line:
+			duplicateLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.toggle_comment:
+			toggleComment();
+			return true;
+			
+			case R.id.copy_line:
+			_copyLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.cut_line:
+			smaliEditor.cutLine();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.convert_uppercase:
+			convertUpperLowerCase(true);
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.convert_lowercase:
+			convertUpperLowerCase(false);
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.increase_indent:
+			increaseIndent();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.decrease_indent:
+			decreaseIndent();
+			dismissEditorWindow();
+			return true;
+			
+			case R.id.smali_instruction:
+			String instruction = getCurrentLineInstruction();
+			if (instruction != null) {
+				SmaliInstructionsDialog dialog = new SmaliInstructionsDialog(this, "smali_instructions.txt", instruction);
+				dialog.show();
+			} else {
+				SmaliInstructionsDialog dialog = new SmaliInstructionsDialog(this, "smali_instructions.txt");
+				dialog.show();
+			}
+			
+			return true;
+			
+			default:
+			return super.onOptionsItemSelected(item);
+		}
+		return true;
+	}
+	
+	
+	public void loadEditorSettings(boolean loadTypeface){
+		smaliEditor.setTextSize(SettingsFragment.getFontSize(this));
+		smaliEditor.setLineNumberEnabled(SettingsFragment.showLineNumbers(this));
+		
+		smaliEditor.setLineSpacing(2.0f, 1.1f);
+		smaliEditor.setLineNumberMarginLeft(2f);
+		
+		smaliEditor.setWordwrap(editorPrefs.getBoolean("wrap_text", false));
+		if(loadTypeface){
+			Typeface typeface = savedFont.equals("normal") 
+			? Typeface.DEFAULT : Typeface.MONOSPACE;
+			smaliEditor.setTypefaceText(typeface);
+			smaliEditor.setTypefaceLineNumber(typeface);
+		} else {
+			if(!savedFont.equals(SettingsFragment.getFontType(this))){
+				Typeface typeface = savedFont.equals("normal") 
+				? Typeface.MONOSPACE : Typeface.DEFAULT;
+				smaliEditor.setTypefaceText(typeface);
+				smaliEditor.setTypefaceLineNumber(typeface);
+				
+				savedFont  = SettingsFragment.getFontType(this);
+				isReload = true;
+				reloadText();
+			}
+		}
+		
+		smaliEditor.replaceComponent(EditorTextActionWindow.class, new TextActionWindow(smaliEditor, new TextActionCallback(Smali2JavaName2(intentClassName))));
+	}
+	
 	
 	private class TextActionCallback implements TextActionWindow.ItemClickCallBack {
 		private final String currentClassName;
@@ -294,12 +578,43 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		
 		@Override
 		public void onClickTranslate(View view, final String text) {
-			runOnUiThread(new TranslateRunnable(text));
+			runOnUiThread(new Runnable() {
+				private final String mText = text;
+				
+				@Override
+				public void run() {
+					if (!sharedPreferences.contains("selectedPackage")) {
+						SketchwareUtil.showMessage(getApplicationContext(), "Select a translation app first");
+						showAvailableTranslationDlg();
+						return;
+					}
+					try {
+						String packageName = sharedPreferences.getString("selectedPackage", "");
+						packageManager.getPackageInfo(packageName, 0);
+						Intent intent = new Intent("android.intent.action.PROCESS_TEXT");
+						intent.setType("text/plain");
+						intent.putExtra("android.intent.extra.PROCESS_TEXT", mText);
+						intent.putExtra("android.intent.extra.PROCESS_TEXT_READONLY", true);
+						intent.setPackage(packageName);
+						startActivity(intent);
+					} catch (PackageManager.NameNotFoundException e) {
+						preferencesEditor.remove("selectedPackage");
+						preferencesEditor.apply();
+						showAvailableTranslationDlg();
+					}
+				}
+			});
 		}
 		
 		@Override
 		public void onLongClickTranslate(View view) {
-			runOnUiThread(new LongClickTranslateRunnable());
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					showAvailableTranslationDlg();
+				}
+			});
+			
 		}
 	}
 	
@@ -379,43 +694,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
-	private class TranslateRunnable implements Runnable {
-		private final String text;
-		
-		TranslateRunnable(String text) {
-			this.text = text;
-		}
-		
-		@Override
-		public void run() {
-			if (!sharedPreferences.contains("selectedPackage")) {
-				SketchwareUtil.showMessage(getApplicationContext(), "Select a translation app first");
-				showAvailableTranslationDlg();
-				return;
-			}
-			try {
-				String packageName = sharedPreferences.getString("selectedPackage", "");
-				packageManager.getPackageInfo(packageName, 0);
-				Intent intent = new Intent("android.intent.action.PROCESS_TEXT");
-				intent.setType("text/plain");
-				intent.putExtra("android.intent.extra.PROCESS_TEXT", text);
-				intent.putExtra("android.intent.extra.PROCESS_TEXT_READONLY", true);
-				intent.setPackage(packageName);
-				startActivity(intent);
-			} catch (PackageManager.NameNotFoundException e) {
-				preferencesEditor.remove("selectedPackage");
-				preferencesEditor.apply();
-				showAvailableTranslationDlg();
-			}
-		}
-	}
 	
-	private class LongClickTranslateRunnable implements Runnable {
-		@Override
-		public void run() {
-			showAvailableTranslationDlg();
-		}
-	}
 	
 	@Override
 	public void onBackPressed() {
@@ -449,7 +728,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		showProgressDialog(true);
 		if (getIntent().hasExtra("ClassName")) {
 			intentClassName = getIntent().getStringExtra("ClassName");
-			currentTitle = extractSubstringAfterLastSlash(intentClassName) + ".smali";
+			currentTitle = extractSubstringAfterLastSlash(intentClassName);
 			
 			try {
 				dexVersion = classTree.getOpenedDexVersion();
@@ -460,7 +739,6 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 				dexVersion = dexPref.getInt("dexVer", 35);
 			}
 			
-			// Handler for UI updates
 			final Handler handler = new Handler(Looper.getMainLooper()) {
 				@Override
 				public void handleMessage(Message msg) {
@@ -485,7 +763,6 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 				}
 			};
 			
-			// Background thread for fetching smali code
 			new Thread() {
 				@Override
 				public void run() {
@@ -499,7 +776,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 						runOnUiThread(new Runnable() {
 							@Override
 							public void run() {
-								getSupportActionBar().setSubtitle(currentTitle);
+								textviewLeft.setText(currentTitle);
 								smaliEditor.setText(smaliCode);
 								showProgressDialog(false);
 							}
@@ -521,46 +798,44 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
-	private void showProgressDialog(boolean show) {
-		if (show) {
-			if (progressDialog == null) {
-				progressDialog = new ProgressDialog(this);
-				progressDialog.setCancelable(false);
-				progressDialog.setCanceledOnTouchOutside(false);
-				progressDialog.requestWindowFeature(1);
-				progressDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+	private void reloadText(){
+		showProgressDialog(true);
+		final Handler handler = new Handler(Looper.getMainLooper()) {
+			@Override
+			public void handleMessage(Message msg) {
+				showProgressDialog(false);
+				try {
+					reloadEditorPosition(editorPrefs.getInt("lineNo", 0));
+				} catch (Exception e) {
+					ErrorDlg(customException(e));
+				}
 			}
-			progressDialog.setMessage(null);
-			try {
-				runOnUiThread(new ShowProgressDialogRunnable());
-			} catch (WindowManager.BadTokenException e) {
-				// Ignore
+		};
+		
+		new Thread() {
+			@Override
+			public void run() {
+				try {
+					String smaliCode = smaliEditor.getText().toString();
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							smaliEditor.setText(smaliCode);
+						}
+					});
+					
+				} catch (Exception e) {
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							showProgressDialog(false);
+							ErrorDlg(customException(e));
+						}
+					});
+				}
+				handler.sendEmptyMessage(0);
 			}
-			progressDialog.setContentView(R.layout.loading);
-			LinearLayout backgroundLayout = progressDialog.findViewById(R.id.background);
-			GradientDrawable gradientDrawable = new GradientDrawable();
-			gradientDrawable.setColor(Color.parseColor("#E0E0E0"));
-			gradientDrawable.setCornerRadius(40.0f);
-			gradientDrawable.setStroke(0, Color.WHITE);
-			progressDialog.findViewById(R.id.linear2).setBackground(gradientDrawable);
-			((LinearLayout) progressDialog.findViewById(R.id.layout_progress)).addView(new RadialProgressView(this));
-		} else if (progressDialog != null) {
-			runOnUiThread(new DismissProgressDialogRunnable());
-		}
-	}
-	
-	private class ShowProgressDialogRunnable implements Runnable {
-		@Override
-		public void run() {
-			progressDialog.show();
-		}
-	}
-	
-	private class DismissProgressDialogRunnable implements Runnable {
-		@Override
-		public void run() {
-			progressDialog.dismiss();
-		}
+		}.start();
 	}
 	
 	private void handleUndoRedo() {
@@ -592,7 +867,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 			if(getLineText.contains("const-string")){
 				int[] positions = getOuterQuotePositions(getLineText);
 				smaliEditor.setSelectionRegion(LineNum, (positions[0] + 1), LineNum, positions[1]);
-				smaliEditor.hideEditorWindows();
+				dismissEditorWindow();
 			} 
 		} catch (Exception e) {
 			SketchwareUtil.showMessage(getApplicationContext(), "Value is out of range." + lineNumber);
@@ -739,8 +1014,18 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 				if (location != null) {
 					int lineNumber = location.lineNumber - 1;
 					try {
-						smaliEditor.setSelectionRegion(lineNumber, location.startColumn, lineNumber, location.endColumn);
-						smaliEditor.hideEditorWindows();
+						smaliEditor.jumpToLine(lineNumber);
+						new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+							@Override
+							public void run() {
+								try {
+									smaliEditor.setSelectionRegion(lineNumber, location.startColumn, lineNumber, location.endColumn);
+									dismissEditorWindow();
+								} catch (Exception e) {
+									ErrorDlg(e.toString());
+								}
+							}
+						}, 100);
 					} catch (Exception e) {
 						ErrorDlg(e.toString());
 					}
@@ -768,64 +1053,11 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		this.menu = menu;
-		getMenuInflater().inflate(R.menu.editor_menu, menu);
-		undoMenuItem = menu.findItem(R.id.undo);
-		redoMenuItem = menu.findItem(R.id.redo);
-		
-		// Delay the execution of LongClickSaveMenu to ensure the view hierarchy is ready
-		new Handler().postDelayed(new LongClickSaveMenu(), 100); // 100ms delay
-		return super.onCreateOptionsMenu(menu);
-	}
-	
-	private class LongClickSaveMenu implements Runnable {
-		@Override
-		public void run() {
-			View saveView = findViewById(R.id.save);
-			if (saveView != null) {
-				saveView.setOnLongClickListener(new View.OnLongClickListener() {
-					@Override
-					public boolean onLongClick(View view) {
-						if (saveCompileError.isEmpty()) {
-							return true;
-						}
-						showPreviousErrorDlg(saveCompileError);
-						return true;
-					}
-				});
-			} else {
-				// Log or handle the case where saveView is null
-				Log.e("LongClickSaveMenu", "saveView is null");
-			}
-		}
-	}
-	
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		int itemId = item.getItemId();
-		if (itemId == R.id.redo) {
-			smaliEditor.redo();
-			handleUndoRedo();
-		} else if (itemId == R.id.undo) {
-			smaliEditor.undo();
-			handleUndoRedo();
-		} else if (itemId == R.id.save && isEditMode) {
-			saveFile(false);
-		} else if (itemId == R.id.navigation) {
-			runOnUiThread(new MethodListRunnable());
-		} else if (itemId == R.id.smali2java) {
-			runOnUiThread(new SmaliToJavaRunnable());
-		}
-		return super.onOptionsItemSelected(item);
-	}
-	
 	private class MethodListRunnable implements Runnable {
+		Cursor cursor = smaliEditor.getCursor();
 		@Override
 		public void run() {
 			try {
-				cursor = smaliEditor.getCursor();
 				if (isFileCreated.isEmpty()) {
 					saveSmaliCodeToFile(smaliEditor.getText().toString(), tempSmaliPath, new FileSaveCallback() {
 						@Override
@@ -921,48 +1153,45 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		
 		@Override
 		public void run() {
-			runOnUiThread(new SaveFileRunnable(isOnBackPressed));
-		}
-	}
-	
-	private class SaveFileRunnable implements Runnable {
-		
-		private final boolean isOnBackPressed;
-		
-		SaveFileRunnable(boolean isOnBackPressed) {
-			this.isOnBackPressed = isOnBackPressed;
-		}
-		
-		@Override
-		public void run() {
-			showProgressDialog(true);
-			final Handler handler = new Handler() {
-				@Override
-				public void handleMessage(Message msg) {
-					showProgressDialog(false);
-				}
-			};
-			new Thread() {
+			runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					Looper.prepare();
-					try {
-						classTree.saveClassDef(Smali2.assemble(smaliEditor.getText().toString(), new SmaliOptions(), dexVersion));
-						showProgressDialog(false);
-						isEditMode = false;
-						SketchwareUtil.showMessage(getApplicationContext(), "Saved successfully");
-						if (isOnBackPressed) {
-							finish();
-							Animatoo.animateSlideLeft(TextEditorActivity.this);
+					showProgressDialog(true);
+					final Handler handler = new Handler() {
+						@Override
+						public void handleMessage(Message msg) {
+							showProgressDialog(false);
 						}
-					} catch (Exception e) {
-						showProgressDialog(false);
-						runOnUiThread(new ErrorRunnable(e));
-					}
-					handler.sendEmptyMessage(0);
-					Looper.loop();
+					};
+					new Thread() {
+						@Override
+						public void run() {
+							Looper.prepare();
+							try {
+								classTree.saveClassDef(Smali2.assemble(smaliEditor.getText().toString(), new SmaliOptions(), dexVersion));
+								showProgressDialog(false);
+								isEditMode = false;
+								SketchwareUtil.showMessage(getApplicationContext(), "Saved successfully");
+								if (isOnBackPressed) {
+									finish();
+									Animatoo.animateSlideLeft(TextEditorActivity.this);
+								}
+							} catch (Exception e) {
+								showProgressDialog(false);
+								runOnUiThread(new Runnable() {
+									@Override
+									public void run() {
+										showProgressDialog(false);
+										runOnUiThread(new ErrorRunnable(e));
+									}
+								});
+							}
+							handler.sendEmptyMessage(0);
+							Looper.loop();
+						}
+					}.start();
 				}
-			}.start();
+			});
 		}
 	}
 	
@@ -1110,7 +1339,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private TextMateColorScheme getColorScheme(String themeName) {
 		try {
 			AssetManager assets = getAssets();
-			return TextMateColorScheme.create(IThemeSource.fromInputStream(assets.open("themes/" + themeName), themeName, null));
+			return TextMateColorScheme.create(IThemeSourceMT.fromInputStream(assets.open("themes/" + themeName), themeName, null));
 		} catch (Exception ignored) {
 			return null;
 		}
@@ -1119,7 +1348,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private Language getSmaliLanguage(String themeName) {
 		try {
 			return TextMateLanguage.create(
-			IGrammarSource.fromInputStream(getAssets().open("smali/syntaxes/smali.tmLanguage.json"), "smali.tmLanguage.json", null),
+			IGrammarSourceMT.fromInputStream(getAssets().open("smali/syntaxes/smali.tmLanguage.json"), "smali.tmLanguage.json", null),
 			new InputStreamReader(getAssets().open("smali/language-configuration.json")),
 			getColorScheme(themeName).getThemeSource()
 			);
@@ -1128,6 +1357,434 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
+	public void _copyLine() {
+		Cursor cursor = smaliEditor.getCursor();
+		if (cursor.isSelected()) {
+			smaliEditor.copyText();
+			return;
+		}
+		int i = cursor.left().line;
+		smaliEditor.setSelectionRegion(i, 0, i, smaliEditor.getText().getColumnCount(i));
+		smaliEditor.copyText(false);
+	}
+	
+	
+	public void toggleComment() {
+		Cursor cursor = smaliEditor.getCursor();
+		Content text = smaliEditor.getText();
+		
+		if (cursor.isSelected()) {
+			int startLine = cursor.getLeftLine();
+			int endLine = cursor.getRightLine();
+			
+			boolean allCommented = true;
+			for (int line = startLine; line <= endLine; line++) {
+				String lineStr = text.getLineString(line);
+				int firstCharPos = getFirstNonWhitespace(lineStr);
+				
+				if (firstCharPos < lineStr.length() && lineStr.charAt(firstCharPos) != '#') {
+					allCommented = false;
+					break;
+				}
+			}
+			
+			for (int line = startLine; line <= endLine; line++) {
+				String lineStr = text.getLineString(line);
+				int firstCharPos = getFirstNonWhitespace(lineStr);
+				
+				if (firstCharPos >= lineStr.length()) {
+					continue;
+				}
+				
+				if (allCommented) {
+					if (lineStr.charAt(firstCharPos) == '#') {
+						int endPos = firstCharPos + 1;
+						if (endPos < lineStr.length() && lineStr.charAt(endPos) == ' ') {
+							endPos++;
+						}
+						smaliEditor.setSelectionRegion(line, firstCharPos, line, endPos);
+						smaliEditor.deleteText();
+					}
+				} else {
+					if (lineStr.charAt(firstCharPos) != '#') {
+						smaliEditor.setSelection(line, firstCharPos);
+						smaliEditor.commitText("# ");
+					}
+				}
+			}
+			
+			smaliEditor.setSelectionRegion(startLine, 0, endLine, text.getColumnCount(endLine));
+		} else {
+			int line = cursor.getLeftLine();
+			String lineStr = text.getLineString(line);
+			int firstCharPos = getFirstNonWhitespace(lineStr);
+			
+			if (firstCharPos < lineStr.length()) {
+				if (lineStr.charAt(firstCharPos) == '#') {
+					int endPos = firstCharPos + 1;
+					if (endPos < lineStr.length() && lineStr.charAt(endPos) == ' ') {
+						endPos++;
+					}
+					smaliEditor.setSelectionRegion(line, firstCharPos, line, endPos);
+					smaliEditor.deleteText();
+				} else {
+					smaliEditor.setSelection(line, firstCharPos);
+					smaliEditor.commitText("# ");
+				}
+			}
+		}
+	}
+	
+	private int getFirstNonWhitespace(String line) {
+		for (int i = 0; i < line.length(); i++) {
+			if (!Character.isWhitespace(line.charAt(i))) {
+				return i;
+			}
+		}
+		return line.length();
+	}
+	
+	public void deleteLine() {
+		Cursor cursor = smaliEditor.getCursor();
+		if (cursor.isSelected()) {
+			smaliEditor.deleteText();
+			return;
+		}
+		
+		io.github.rosemoe.sora.text.CharPosition pos = cursor.left();
+		int currentLine = pos.getLine();
+		int nextLine = currentLine + 1;
+		
+		if (nextLine == smaliEditor.getLineCount()) {
+			smaliEditor.setSelectionRegion(
+			currentLine, 0, 
+			currentLine, smaliEditor.getText().getColumnCount(currentLine)
+			);
+		} else {
+			smaliEditor.setSelectionRegion(
+			currentLine, 0, 
+			nextLine, 0
+			);
+		}
+		smaliEditor.deleteText();
+	}
+	
+	public void emptyLine() {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cur = editor.getCursor();
+		
+		final int startLine = cur.getLeftLine();
+		final int endLine = cur.isSelected() ? cur.getRightLine() : startLine;
+		
+		content.beginBatchEdit();
+		try {
+			for (int line = endLine; line >= startLine; line--) {
+				final int lineEnd = content.getColumnCount(line);
+				if (lineEnd > 0) {
+					content.delete(line, 0, line, lineEnd);
+				}
+			}
+		} finally {
+			content.endBatchEdit();
+		}
+		
+		editor.setSelection(startLine, 0);
+	}
+	
+	private void replaceLine() {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		
+		content.beginBatchEdit();
+		try {
+			if (cursor.isSelected()) {
+				int startLine = cursor.getLeftLine();
+				int endLine = cursor.getRightLine();
+				int endCol = content.getColumnCount(endLine);
+				
+				content.delete(startLine, 0, endLine, endCol);
+				editor.pasteText();
+				editor.setSelection(startLine, 0);
+			} else {
+				int line = cursor.getLeftLine();
+				int lineLength = content.getColumnCount(line);
+				
+				content.delete(line, 0, line, lineLength);
+				editor.pasteText();
+				
+				editor.setSelection(line, 0);
+			}
+		} finally {
+			content.endBatchEdit();
+		}
+	}
+	
+	private void duplicateLine() {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		
+		content.beginBatchEdit();
+		try {
+			if (cursor.isSelected()) {
+				int startLine = cursor.getLeftLine();
+				int endLine = cursor.getRightLine();
+				
+				StringBuilder duplicateContent = new StringBuilder("\n");
+				for (int i = startLine; i <= endLine; i++) {
+					duplicateContent.append(content.getLineString(i)).append(i < endLine ? "\n" : "");
+				}
+				
+				content.insert(
+				endLine, content.getColumnCount(endLine),
+				duplicateContent.toString()
+				);
+				
+				int newStartLine = endLine + 1;
+				int newEndLine = endLine + 1 + (endLine - startLine);
+				editor.setSelectionRegion(
+				newStartLine, 0,
+				newEndLine, content.getColumnCount(newEndLine)
+				);
+			} else {
+				int line = cursor.getLeftLine();
+				int column = cursor.getLeftColumn();
+				String lineContent = content.getLineString(line);
+				
+				content.insert(
+				line, content.getColumnCount(line), "\n" + lineContent);
+				
+				editor.setSelection(line, column);
+			}
+		} finally {
+			
+			content.endBatchEdit();
+		}
+	}
+	
+	public void convertUpperLowerCase(boolean toUpper) {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		
+		if (!cursor.isSelected()) {
+			SketchwareUtil.showMessage(this, "Please select the text to be converted first");
+			return; 
+		}
+		
+		content.beginBatchEdit();
+		try {
+			int startLine = cursor.getLeftLine();
+			int startCol = cursor.getLeftColumn();
+			int endLine = cursor.getRightLine();
+			int endCol = cursor.getRightColumn();
+			
+			String selectedText = content.subContent(startLine, startCol, endLine, endCol).toString();
+			String convertedText = toUpper ? selectedText.toUpperCase() : selectedText.toLowerCase();
+			content.replace(startLine, startCol, endLine, endCol, convertedText);
+			editor.setSelectionRegion(startLine, startCol, endLine, startCol + convertedText.length());
+		} finally {
+			content.endBatchEdit();
+		}
+	}
+	
+	public void increaseIndent() {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		final int tabWidth = editor.getTabWidth();
+		final String tabSpaces = String.format("%" + tabWidth + "s", "");
+		
+		content.beginBatchEdit();
+		try {
+			if (cursor.isSelected()) {
+				int startLine = cursor.getLeftLine();
+				int endLine = cursor.getRightLine();
+				
+				for (int line = startLine; line <= endLine; line++) {
+					content.insert(line, 0, tabSpaces);
+				}
+			} else {
+				int line = cursor.getLeftLine();
+				int column = cursor.getLeftColumn();
+				content.insert(line, column, tabSpaces);
+				editor.setSelection(line, column + tabWidth);
+			}
+		} finally {
+			content.endBatchEdit();
+		}
+	}
+	
+	public void decreaseIndent() {
+		final CodeEditor editor = smaliEditor;
+		final Content content = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		final int tabWidth = editor.getTabWidth();
+		
+		content.beginBatchEdit();
+		try {
+			int startLine = cursor.isSelected() ? cursor.getLeftLine() : cursor.getLeftLine();
+			int endLine = cursor.isSelected() ? cursor.getRightLine() : cursor.getLeftLine();
+			
+			for (int line = startLine; line <= endLine; line++) {
+				String lineText = content.getLineString(line);
+				int spacesToRemove = 0;
+				
+				while (spacesToRemove < lineText.length() && 
+				lineText.charAt(spacesToRemove) == ' ') {
+					spacesToRemove++;
+				}
+				
+				if (spacesToRemove > 0) {
+					int removeCount = spacesToRemove >= tabWidth ? tabWidth : spacesToRemove;
+					content.delete(line, 0, line, removeCount);
+				}
+			}
+		} finally {
+			content.endBatchEdit();
+		}
+	}
+	
+	
+	private void reloadEditorPosition(int position) {
+		new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					smaliEditor.post(new Runnable() {
+						@Override
+						public void run() {
+							smaliEditor.jumpToLine(position);
+						}
+					});
+				} catch (Exception e) {
+					ErrorDlg(e.toString());
+				}
+			}
+		}, 200);
+	}
+	
+	
+	
+	public void jumpToLine() {
+		View view = LayoutInflater.from(this).inflate(R.layout.dialog_jump_to_line, null);
+		TextInputLayout textInputLayout = view.findViewById(R.id.textInputLayout);
+		EditText editText = view.findViewById(R.id.editText);
+		
+		// Set dynamic hint
+		String hint = "Line number [1-" + smaliEditor.getLineCount() + "]";
+		textInputLayout.setHint(hint);
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this)
+		.setTitle("Jump to line")
+		.setView(view)
+		.setPositiveButton("OK", null)
+		.setNegativeButton("Cancel", null);
+		
+		AlertDialog dialog_mt = builder.create();
+		
+		
+		dialog_mt.getWindow().setBackgroundDrawable(Notify_MT.createDrawable(20, Color.parseColor("#FFFFFF")));
+		dialog_mt.show();
+		dialog_mt.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener(){
+			
+			@Override
+			public void onClick(View v){
+				
+				if (editText.getText().toString().equals("")) {
+					textInputLayout.setError("Enter something !");
+				}
+				else {
+					try {
+						smaliEditor.jumpToLine(Integer.parseInt(editText.getText().toString()) - 1);
+						dialog_mt.dismiss();
+					} catch (Exception e) {
+						textInputLayout.setError("Value is out of range.");
+					}
+				}
+				
+			}
+		});
+	}
+	
+	public void dismissEditorWindow(){
+		new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					smaliEditor.hideEditorWindows();
+				} catch (Exception e) {
+					ErrorDlg(e.toString());
+				}
+			}
+		}, 50);
+	}
+	
+	private void showProgressDialog(boolean show) {
+		if (show) {
+			if (progressDialog == null) {
+				progressDialog = new ProgressDialog(this);
+				progressDialog.setCancelable(false);
+				progressDialog.setCanceledOnTouchOutside(false);
+				progressDialog.requestWindowFeature(1);
+				progressDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+			}
+			progressDialog.setMessage(null);
+			try {
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						progressDialog.show();
+					}
+				});
+			} catch (WindowManager.BadTokenException e) {
+				// Ignore
+			}
+			progressDialog.setContentView(R.layout.loading);
+			LinearLayout backgroundLayout = progressDialog.findViewById(R.id.background);
+			GradientDrawable gradientDrawable = new GradientDrawable();
+			gradientDrawable.setColor(Color.parseColor("#E0E0E0"));
+			gradientDrawable.setCornerRadius(40.0f);
+			gradientDrawable.setStroke(0, Color.WHITE);
+			progressDialog.findViewById(R.id.linear2).setBackground(gradientDrawable);
+			((LinearLayout) progressDialog.findViewById(R.id.layout_progress)).addView(new RadialProgressView(this));
+		} else if (progressDialog != null) {
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					progressDialog.dismiss();
+				}
+			});
+		}
+	}
+	
+	public String getCurrentLineInstruction() {
+		CodeEditor editor = smaliEditor;
+		Cursor cursor = editor.getCursor();
+		Content content = editor.getText();
+		
+		int line = cursor.getLeftLine();
+		String lineText = content.getLineString(line);
+		String trimmed = lineText.trim();
+		
+		if (trimmed.isEmpty()) {
+			return null;
+		}
+		
+		
+		int endOfFirstWord = 0;
+		while (endOfFirstWord < trimmed.length()) {
+			char c = trimmed.charAt(endOfFirstWord);
+			if (Character.isWhitespace(c)) break;  // Fixed syntax here
+			if (c == '{' || c == '}' || c == ';') break;
+			endOfFirstWord++;
+		}
+		
+		String firstWord = trimmed.substring(0, endOfFirstWord);
+		return SmaliInstructionHelper.isSmaliInstruction(firstWord) ? firstWord : null;
+	}
 	
 	public String Smali2JavaName(String smaliName) {
 		return smaliName.substring(1, smaliName.length() - 1).replace('/', '.');
@@ -1155,7 +1812,6 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		return index != -1 ? text.substring(0, index) : "";
 	}
 	
-	
 	public static int[] getOuterQuotePositions(String input) {
 		int startQuote = -1;
 		int endQuote = -1;
@@ -1181,5 +1837,11 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		
 		return new int[]{startQuote, endQuote};
 	}
+	
+	public void copiedToClipboard(String text) {
+		((ClipboardManager) getSystemService(getApplicationContext().CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("clipboard", text));
+		SketchwareUtil.showMessage(this, "Text has been copied to clipboard");
+	}
+	
 	
 }
