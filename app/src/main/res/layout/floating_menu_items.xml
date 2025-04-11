@@ -1,0 +1,53 @@
+<androidx.cardview.widget.CardView
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:card_view="http://schemas.android.com/apk/res-auto"
+	android:id="@+id/cardView"
+	android:layout_width="match_parent"
+	android:layout_height="45dp"
+	android:layout_margin="8dp"
+	card_view:cardCornerRadius="10dp"
+	card_view:cardElevation="2dp">
+	<RelativeLayout
+		android:id="@+id/relativeLayout"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:paddingLeft="8dp"
+		android:paddingRight="8dp"
+		android:paddingBottom="8dp"
+		android:background="@drawable/rounded_corner_ripple"
+		android:focusable="true">
+		<ImageView
+			android:id="@+id/imageView"
+			android:layout_width="30dp"
+			android:layout_height="30dp"
+			android:layout_marginLeft="10dp"
+			android:src="@drawable/ic_setting_mt"
+			android:scaleType="fitCenter"
+			android:focusable="false"
+			android:layout_centerVertical="true" />
+		<TextView
+			android:id="@+id/txtTitle"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginLeft="10dp"
+			android:text="Menu items"
+			android:textSize="14sp"
+			android:textColor="#000000"
+			android:focusable="false"
+			android:textAppearance="@style/TextAppearance.Compat.Notification.Title"
+			android:layout_toRightOf="@id/imageView"
+			android:layout_toEndOf="@id/imageView"
+			android:layout_centerVertical="true" />
+		<Switch
+			android:id="@+id/disableSwitch"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:padding="8dp"
+			android:textSize="12sp"
+			android:textColor="#000000"
+			android:focusable="false"
+			android:layout_alignParentRight="true"
+			android:layout_alignParentEnd="true"
+			android:layout_centerVertical="true" />
+	</RelativeLayout>
+</androidx.cardview.widget.CardView>
