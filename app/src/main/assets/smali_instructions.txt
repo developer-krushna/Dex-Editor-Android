@@ -1,0 +1,838 @@
+Register introduction
+vA is a 4-bit register with a value range of v0 - v15
+vAA is an 8-bit register with a value range of v0 - v255
+vAAAA is a 16-bit register with a value range of v0 - v65535
+
+Literal value introduction
+The following uses 0xF, 0xFF, etc. to represent literal values. Similar to registers, the number of F is used to represent the value range, for example:
+The value range of 0xF is [-0x8, 0x7]
+The value range of 0xFF is [-0x80, 0x7F]
+
+Primitive types
+V - void, Z - boolean, B - byte
+C - char, S - short, I - int
+J - long, F - float, D - double
+
+nop
+No operation.
+
+move vA, vB
+Move the value of the vB register to the vA register.
+
+move/from16 vAA, vBBBB
+Move the value of the vBBBB register to the vAA register.
+
+move/16 vAAAA, vBBBB
+Move the value of the vBBBB register to the vAAAA register.
+
+move-wide vA, vB
+Move the value of the (vB, vB+1) register-pair to the (vA, vA+1) register-pair.
+
+move-wide/from16 vAA, vBBBB
+Move the value of the (vBBBB, vBBBB+1) register-pair to the (vAA, vAA+1) register-pair.
+
+move-wide/16 vAAAA, vBBBB
+Move the value of the (vBBBB, vBBBB+1) register-pair to the (vAAAA, vAAAA+1) register-pair.
+
+move-object vA, vB
+Move the object reference in the vB register to the vA register.
+
+move-object/from16 vAA, vBBBB
+Move the object reference in the vBBBB register to the vAA register.
+
+move-object/16 vAAAA, vBBBB
+Move the object reference in the vBBBB register to the vAAAA register.
+
+move-result vAA
+Move the non-object result returned by the previous invoke instruction to the vAA register.
+
+move-result-wide vAA
+Move the 64-bit non-object result returned by the previous invoke instruction to the (vAA, vAA+1) register-pair.
+
+move-result-object vAA
+Move the object result returned by the previous invoke or filled-new-array instruction to the vAA register.
+
+move-exception vAA
+Move the exception just caught to the vAA register
+
+return-void
+Return from a void method.
+
+return vAA
+Return from a single-width (32-bit) non-object value-returning method.
+
+return-wide vAA
+Return from a double-width (64-bit) value-returning method.
+
+return-object vAA
+Return from an object-returning method.
+
+const/4 vA, 0xF
+Move the literal value to the vA register.
+
+const/16 vAA, 0xFFFF
+Move the literal value to the vAA register.
+
+const vAA, 0xFFFFFFFF
+Move the literal value to the vAA register.
+
+const/high16 vAA, 0xFFFF
+Move the literal value (right zero-extended to 32 bits, that is 0xFFFF0000) to the vAA register.
+
+const-wide/16 vAA, 0xFFFF
+Move the literal value to the (vAA, vAA+1) register-pair.
+
+const-wide/32 vAA, 0xFFFFFFFF
+Move the literal value to the (vAA, vAA+1) register-pair.
+
+const-wide vAA, #FFFFFFFFFFFFFFFF
+Move the literal value to the (vAA, vAA+1) register-pair.
+
+const-wide/high16 vAA, 0xFFFF
+Move the literal value (right zero-extended to 64 bits, that is 0xFFFF0000000000000) to the (vAA, vAA+1) register-pair.
+
+const-string vAA, string
+Move a reference to the specified string to the vAA register.
+
+const-string/jumbo vAA, string (32-bit index)
+Move a reference to the specified string to the vAA register.
+(Using smaki library, const-string will be automatically converted to const-string/jumbo instructions when necessary.)
+
+const-class vAA, type
+Move a class reference of the specified type to the vAA register.
+
+monitor-enter vAA
+Acquire the monitor for the specified object.
+
+monitor-exit vAA
+Release the monitor for the specified object.
+
+check-cast vAA, type
+Throw a ClassCastException if the reference in the vAA register cannot be cast to the specified type.
+
+instance-of vA, vB, type
+Store in the vA register 1 if the reference in the vB register is an instance of the given type, or 0 if not, that is:
+vA = vB instanceOf type ? 1 : 0
+
+array-length vA, vB
+Store in the vA register the length of the array referenced by the vB register, that is:
+vA = vB.length
+
+new-instance vAA, type
+Construct a new instance of the specified type, storing a reference to it in the vAA register.
+
+new-array vA, vB, type
+Constructs a new array of the specified type and size (vB), storing a reference to it in the vA register.
+
+filled-new-array {vC, vD, vE, vF, vG}, type
+Construct an array of the given type and size, filling it with the supplied contents. The type must be an array type. The array's contents must be single-word (that is, no arrays of long or double, but reference types are acceptable). The constructed instance is stored as a "result" in the same way that the method invocation instructions store their results, so the constructed instance must be moved to a register with an immediately subsequent move-result-object instruction (if it is to be used).
+
+filled-new-array/range {vCCCC .. vNNNN}, type
+Construct an array of the given type and size, filling it with the supplied contents. The type must be an array type. The array's contents must be single-word (that is, no arrays of long or double, but reference types are acceptable). The constructed instance is stored as a "result" in the same way that the method invocation instructions store their results, so the constructed instance must be moved to a register with an immediately subsequent move-result-object instruction (if it is to be used).
+
+fill-array-data vAA, :array
+Fill the given array with the indicated data. The reference must be to an array of primitives, and the data table must match it in type and must contain no more elements than will fit in the array. That is, the array may be larger than the table, and if so, only the initial elements of the array are set, leaving the remainder alone.
+
+throw vAA
+Throws an exception of the type specified in the vAA register.
+
+goto :goto_XX
+Unconditionally jump to target.
+
+goto/16 :goto_XXXX
+Unconditionally jump to target.
+
+goto/32 :goto_XXXXXXXX
+Unconditionally jump to target.
+
+packed-switch vAA, :pswitch_data
+Branch jump instruction, the vAA register is the value that needs to be judged in the switch branch, :pswitch_data points to a packed-switch-payload format offset table, the value in the table increases regularly, fall through to the next instruction if there is no match.
+
+sparse-switch vAA, :sswitch_data
+Branch jump instruction, the vAA register is the value that needs to be judged in the switch branch, :sswitch_data points to a sparse-switch-payload format offset table, the value in the table is an irregular offset table, fall through to the next instruction if there is no match.
+
+cmpl-float vAA, vBB, vCC
+Compare two floating point numbers:
+vAA = vBB < vCC ? yes: 1, no: -1, equal: 0
+
+cmpg-float vAA, vBB, vCC
+Compare two floating point numbers:
+vAA = vBB > vCC ? yes: 1, no: -1, equal: 0
+
+cmpl-double vAA, vBB, vCC
+Compare two floating point numbers:
+vAA = (vBB, vBB+1) < (vCC, vCC+1) ? yes: 1, no: -1, equal: 0
+
+cmpg-double vAA, vBB, vCC
+Compare two floating point numbers:
+vAA = (vBB, vBB+1) > (vCC, vCC+1) ? yes: 1, no: -1, equal: 0
+
+cmp-long vAA, vBB, vCC
+Compare two long integers:
+vAA = (vBB, vBB+1) > (vCC, vCC+1) ? yes: 1, no: -1, equal: 0
+
+if-eq vA, vB, :cond_XXXX
+Jump to target if vA == vB.
+(eq is an abbreviation for Equals)
+
+if-ne vA, vB, :cond_XXXX
+Jump to target if vA != vB.
+(ne is an abbreviation for Not Equals)
+
+if-lt vA, vB, :cond_XXXX
+Jump to target if vA < vB.
+(lt is an abbreviation for Less Than)
+
+if-le vA, vB, :cond_XXXX
+Jump to target if vA <= vB.
+(le is an abbreviation for Less than or Equal)
+
+if-gt vA, vB, :cond_XXXX
+Jump to target if vA > vB.
+(gt is an abbreviation for Greater Than)
+
+if-ge vA, vB, :cond_XXXX
+Jump to target if vA >= vB.
+(ge is an abbreviation for Greater than or Equal)
+
+if-eqz vAA, :cond_XXXX
+Jump to target if vAA == 0.
+(eqz is the abbreviation of Equals to Zero)
+
+if-nez vAA, :cond_XXXX
+Jump to target if vAA != 0.
+(nez is the abbreviation of Not Equals to Zero)
+
+if-ltz vAA, :cond_XXXX
+Jump to target if vAA < 0.
+(ltz is the abbreviation of Less Than Zero)
+
+if-lez vAA, :cond_XXXX
+Jump to target if vAA <= 0.
+(lez is Less than or Equal to Zero)
+
+if-gtz vAA, :cond_XXXX
+Jump to target if vAA > 0.
+(gtz is an abbreviation for Greater Than Zero)
+
+if-gez vAA, :cond_XXXX
+Jump to target if vAA >= 0.
+(gez is Greater than or Equal to Zero)
+
+aget vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the int array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aget-wide vAA, vBB, vCC
+Store in the (vAA, vAA+1) register-pair the value whose index is vCC in the long/double array referenced by the vBB register, that is:
+(vAA, vAA+1) = vBB[vCC]
+
+aget-object vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the object array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aget-boolean vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the boolean array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aget-byte vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the byte array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aget-char vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the char array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aget-short vAA, vBB, vCC
+Store in the vAA register the value whose index is vCC in the short array referenced by the vBB register, that is:
+vAA = vBB[vCC]
+
+aput vAA, vBB, vCC
+Set the value of index (vCC) in the int array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+aput-wide vAA, vBB, vCC
+Set the value of index (vCC) in the long/double array referenced by the vBB register to the value of the (vAA, vAA+1) register-pair, that is:
+vBB[vCC] = (vAA, vAA+1)
+
+aput-object vAA, vBB, vCC
+Set the value of index (vCC) in the object array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+aput-boolean vAA, vBB, vCC
+Set the value of index (vCC) in the boolean array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+aput-byte vAA, vBB, vCC
+Set the value of index (vCC) in the byte array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+aput-char vAA, vBB, vCC
+Set the value of index (vCC) in the char array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+aput-short vAA, vBB, vCC
+Set the value of index (vCC) in the short array referenced by the vBB register to the value of the vAA register, that is:
+vBB[vCC] = vAA
+
+iget vA, vB, fields
+Store in the vA register the value of the specified int type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iget-wide vA, vB, fields
+Store in the (vA, vA+1) register-pair the value of the specified long/double type field from the instance referenced by the vB register, that is:
+(vA, vA+1) = vB.field
+
+iget-object vA, vB, fields
+Store in the vA register the value of the specified object type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iget-boolean vA, vB, fields
+Store in the vA register the value of the specified boolean type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iget-byte vA, vB, field
+Store in the vA register the value of the specified byte type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iget-char vA, vB, field
+Store in the vA register the value of the specified char type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iget-short vA, vB, fields
+Store in the vA register the value of the specified short type field from the instance referenced by the vB register, that is:
+vA = vB.field
+
+iput vA, vB, fields
+Set the value of the specified int field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+iput-wide vA, vB, fields
+Set the value of the specified long/double field in the instance referenced by the vB register to the value of the (vA, vA+1) register-pair, that is:
+vB.field = (vA, vA+1)
+
+iput-object vA, vB, fields
+Set the value of the specified object field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+iput-boolean vA, vB, fields
+Set the value of the specified boolean field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+iput-byte vA, vB, fields
+Set the value of the specified byte field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+iput-char vA, vB, fields
+Set the value of the specified char field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+iput-short vA, vB, fields
+Set the value of the specified short field in the instance referenced by the vB register to the value of the vA register, that is:
+vB.field = vA
+
+sget vAA, static field
+Store in the vAA register the value of the specified static int field.
+
+sget-wide vAA, static field
+Store in the (vAA, vAA+1) register-pair the value of the specified static long/double field.
+
+sget-object vAA, static field
+Store in the vAA register the value of the specified static object field.
+
+sget-boolean vAA, static field
+Store in the vAA register the value of the specified static boolean field.
+
+sget-byte vAA, static field
+Store in the vAA register the value of the specified static byte field.
+
+sget-char vAA, static field
+Store in the vAA register the value of the specified static char field.
+
+sget-short vAA, static field
+Store in the vAA register the value of the specified static short field.
+
+sput vAA, static field
+Sets the value of the specified static int field to the value of the vAA register.
+
+sput-wide vAA, static field
+Set the value of the specified static long/double field to the value of the (vAA, vAA+1) register-pair.
+
+sput-object vAA, static field
+Sets the value of the specified static object type field to the value of the vAA register.
+
+sput-boolean vAA, static field
+Set the value of the specified static boolean field to the value of the vAA register.
+
+sput-byte vAA, static field
+Set the value of the specified static byte field to the value of the vAA register.
+
+sput-char vAA, static field
+Set the value of the specified static char field to the value of the vAA register.
+
+sput-short vAA, static field
+Sets the value of the specified static short field to the value of the vAA register.
+
+invoke-virtual {vC, vD, vE, vF, vG}, method
+Invoking a virtual method.
+
+invoke-super {vC, vD, vE, vF, vG}, method
+Invoking a superclass method.
+
+invoke-direct {vC, vD, vE, vF, vG}, method
+Invoking a direct method.
+
+invoke-static {vC, vD, vE, vF, vG}, method
+Invoking a static method.
+
+invoke-interface {vC, vD, vE, vF, vG}, method
+Invoking a interface method.
+
+invoke-virtual/range {vCCCC .. vNNNN}, method
+Invoking a virtual method.
+
+invoke-super/range {vCCCC .. vNNNN}, method
+Invoking a superclass method.
+
+invoke-direct/range {vCCCC .. vNNNN}, method
+Invoking a direct method.
+
+invoke-static/range {vCCCC .. vNNNN}, method
+Invoking a static method.
+
+invoke-interface/range {vCCCC .. vNNNN}, method
+Invoking a interface method.
+
+neg-int vA, vB
+Complements an integer, that is:
+vA = -vB
+
+not-int vA, vB
+Negates an integer, that is:
+vA = ~vB
+
+neg-long vA, vB
+Complements a long integer, that is:
+(vA, vA+1) = -(vB, vB+1)
+
+not-long vA, vB
+Negates a long integer, that is:
+(vA, vA+1) = ~(vB, vB+1)
+
+neg-float vA, vB
+Complements a float number, that is:
+vA = -vB
+
+neg-double vA, vB
+Complements a double number, that is:
+(vA, vA+1) = -(vB, vB+1)
+
+int-to-long vA, vB
+Converts integer to long, that is:
+(vA, vA+1) = (long) vB
+
+int-to-float vA, vB
+Converts integer to float, that is:
+vA = (float) vB
+
+int-to-double vA, vB
+Converts integer to double, that is:
+(vA, vA+1) = (double) vB
+
+long-to-int vA, vB
+Converts long to integer, that is:
+vA = (int) (vB, vB+1)
+
+long-to-float vA, vB
+Converts long to float, that is:
+vA = (float) (vB, vB+1)
+
+long-to-double vA, vB
+Converts long to double, that is:
+(vA, vA+1) = (double) (vB, vB+1)
+
+float-to-int vA, vB
+Converts float to integer, that is:
+vA = (int) vB
+
+float-to-long vA, vB
+Converts float to long, that is:
+(vA, vA+1) = (long) vB
+
+float-to-double vA, vB
+Converts float to double, that is:
+(vA, vA+1) = (double) vB
+
+double-to-int vA, vB
+Converts double to integer, that is:
+vA = (int) (vB, vB+1)
+
+double-to-long vA, vB
+Converts double to long, that is:
+(vA, vA+1) = (long) (vB, vB+1)
+
+double-to-float vA, vB
+Converts double to float, that is:
+vA = (float) (vB, vB+1)
+
+int-to-byte vA, vB
+Converts integer to byte, that is:
+vA = (byte) vB
+
+int-to-char vA, vB
+Converts integer to char, that is:
+vA = (char) vB
+
+int-to-short vA, vB
+Converts integer to short, that is:
+vA = (short) vB
+
+add-int vAA, vBB, vCC
+Twos-complement addition, that is:
+vAA = vBB + vCC
+
+sub-int vAA, vBB, vCC
+Twos-complement subtraction, that is:
+vAA = vBB - vCC
+
+mul-int vAA, vBB, vCC
+Twos-complement multiplication, that is:
+vAA = vBB * vCC
+
+div-int vAA, vBB, vCC
+Twos-complement division, that is:
+vAA = vBB / vCC
+
+rem-int vAA, vBB, vCC
+Twos-complement remainder after division., that is:
+vAA = vBB % vCC
+
+and-int vAA, vBB, vCC
+Bitwise AND operation, that is:
+vAA = vBB & vCC
+
+or-int vAA, vBB, vCC
+Bitwise OR operation, that is:
+vAA = vBB | vCC
+
+xor-int vAA, vBB, vCC
+Bitwise XOR operation, that is:
+vAA = vBB ^ vCC
+
+shl-int vAA, vBB, vCC
+Bitwise left shift, that is:
+vAA = vBB << vCC
+
+shr-int vAA, vBB, vCC
+Bitwise signed right shift, that is:
+vAA = vBB >> vCC
+
+ushr-int vAA, vBB, vCC
+Bitwise unsigned right shift, that is:
+vAA = vBB >>> vCC
+
+add-long vAA, vBB, vCC
+Twos-complement addition, that is:
+(vAA, vAA+1) = (vBB, vBB+1) + (vCC, vCC+1)
+
+sub-long vAA, vBB, vCC
+Twos-complement subtraction, that is:
+(vAA, vAA+1) = (vBB, vBB+1) - (vCC, vCC+1)
+
+mul-long vAA, vBB, vCC
+Twos-complement multiplication, that is:
+(vAA, vAA+1) = (vBB, vBB+1) * (vCC, vCC+1)
+
+div-long vAA, vBB, vCC
+Twos-complement division, that is:
+(vAA, vAA+1) = (vBB, vBB+1) / (vCC, vCC+1)
+
+rem-long vAA, vBB, vCC
+Twos-complement remainder after division, that is:
+(vAA, vAA+1) = (vBB, vBB+1) % (vCC, vCC+1)
+
+and-long vAA, vBB, vCC
+Bitwise AND operation, that is:
+(vAA, vAA+1) = (vBB, vBB+1) & (vCC, vCC+1)
+
+or-long vAA, vBB, vCC
+Bitwise OR operation, that is:
+(vAA, vAA+1) = (vBB, vBB+1) | (vCC, vCC+1)
+
+xor-long vAA, vBB, vCC
+Bitwise XOR operation, that is:
+(vAA, vAA+1) = (vBB, vBB+1) ^ (vCC, vCC+1)
+
+shl-long vAA, vBB, vCC
+Bitwise left shift, that is:
+(vAA, vAA+1) = (vBB, vBB+1) << vCC
+
+shr-long vAA, vBB, vCC
+Bitwise signed right shift, that is:
+(vAA, vAA+1) = (vBB, vBB+1) >> vCC
+
+ushr-long vAA, vBB, vCC
+Bitwise unsigned right shift, that is:
+(vAA, vAA+1) = (vBB, vBB+1) >>> vCC
+
+add-float vAA, vBB, vCC
+Floating point addition, that is:
+vAA = vBB + vCC
+
+sub-float vAA, vBB, vCC
+Floating point subtraction, that is:
+vAA = vBB - vCC
+
+mul-float vAA, vBB, vCC
+Floating point multiplication, that is:
+vAA = vBB * vCC
+
+div-float vAA, vBB, vCC
+Floating point division, that is:
+vAA = vBB / vCC
+
+rem-float vAA, vBB, vCC
+Floating point remainder after division, that is:
+vAA = vBB % vCC
+
+add-double vAA, vBB, vCC
+Floating point addition, that is:
+(vAA, vAA+1) = (vBB, vBB+1) + (vCC, vCC+1)
+
+sub-double vAA, vBB, vCC
+Floating point subtraction, that is:
+(vAA, vAA+1) = (vBB, vBB+1) - (vCC, vCC+1)
+
+mul-double vAA, vBB, vCC
+Floating point multiplication, that is:
+(vAA, vAA+1) = (vBB, vBB+1) * (vCC, vCC+1)
+
+div-double vAA, vBB, vCC
+Floating point division, that is:
+(vAA, vAA+1) = (vBB, vBB+1) / (vCC, vCC+1)
+
+rem-double vAA, vBB, vCC
+Floating point remainder after division, that is:
+(vAA, vAA+1) = (vBB, vBB+1) % (vCC, vCC+1)
+
+add-int/2addr vA, vB
+Twos-complement addition, that is:
+vA = vA + vB
+
+sub-int/2addr vA, vB
+Twos-complement subtraction, that is:
+vA = vA - vB
+
+mul-int/2addr vA, vB
+Twos-complement multiplication, that is:
+vA = vA * vB
+
+div-int/2addr vA, vB
+Twos-complement division, that is:
+vA = vA / vB
+
+rem-int/2addr vA, vB
+Twos-complement remainder after division, that is:
+vA = vA % vB
+
+and-int/2addr vA, vB
+Bitwise AND operation, that is:
+vA = vA & vB
+
+or-int/2addr vA, vB
+Bitwise OR operation, that is:
+vA = vA | vB
+
+xor-int/2addr vA, vB
+Bitwise XOR operation, that is:
+vA = vA ^ vB
+
+shl-int/2addr vA, vB
+Bitwise left shift, that is:
+vA = vA << vB
+
+shr-int/2addr vA, vB
+Bitwise signed right shift, that is:
+vA = vA >> vB
+
+ushr-int/2addr vA, vB
+Bitwise unsigned right shift, that is:
+vA = vA >>> vB
+
+add-long/2addr vA, vB
+Twos-complement addition, that is:
+(vA, vA+1) = (vA, vA+1) + (vB, vB+1)
+
+sub-long/2addr vA, vB
+Twos-complement subtraction, that is:
+(vA, vA+1) = (vA, vA+1) - (vB, vB+1)
+
+mul-long/2addr vA, vB
+Twos-complement multiplication, that is:
+(vA, vA+1) = (vA, vA+1) * (vB, vB+1)
+
+div-long/2addr vA, vB
+Twos-complement division, that is:
+(vA, vA+1) = (vA, vA+1) / (vB, vB+1)
+
+rem-long/2addr vA, vB
+Twos-complement remainder after division, that is:
+(vA, vA+1) = (vA, vA+1) % (vB, vB+1)
+
+and-long/2addr vA, vB
+Bitwise AND operation, that is:
+(vA, vA+1) = (vA, vA+1) & (vB, vB+1)
+
+or-long/2addr vA, vB
+Bitwise OR operation, that is:
+(vA, vA+1) = (vA, vA+1) | (vB, vB+1)
+
+xor-long/2addr vA, vB
+Bitwise XOR operation, that is:
+(vA, vA+1) = (vA, vA+1) ^ (vB, vB+1)
+
+shl-long/2addr vA, vB
+Bitwise left shift, that is:
+(vA, vA+1) = (vA, vA+1) << vB
+
+shr-long/2addr vA, vB
+Bitwise signed right shift, that is:
+(vA, vA+1) = (vA, vA+1) >> vB
+
+ushr-long/2addr vA, vB
+Bitwise unsigned right shift, that is:
+(vA, vA+1) = (vA, vA+1) >>> vB
+
+add-float/2addr vA, vB
+Floating point addition, that is:
+vA = vA + vB
+
+sub-float/2addr vA, vB
+Floating point subtraction, that is:
+vA = vA - vB
+
+mul-float/2addr vA, vB
+Floating point multiplication, that is:
+vA = vA * vB
+
+div-float/2addr vA, vB
+Floating point division, that is:
+vA = vA / vB
+
+rem-float/2addr vA, vB
+Floating point remainder after division, that is:
+vA = vA % vB
+
+add-double/2addr vA, vB
+Floating point addition, that is:
+(vA, vA+1) = (vA, vA+1) + (vB, vB+1)
+
+sub-double/2addr vA, vB
+Floating point subtraction, that is:
+(vA, vA+1) = (vA, vA+1) - (vB, vB+1)
+
+mul-double/2addr vA, vB
+Floating point multiplication, that is:
+(vA, vA+1) = (vA, vA+1) * (vB, vB+1)
+
+div-double/2addr vA, vB
+Floating point division, that is:
+(vA, vA+1) = (vA, vA+1) / (vB, vB+1)
+
+rem-double/2addr vA, vB
+Floating point remainder after division, that is:
+(vA, vA+1) = (vA, vA+1) % (vB, vB+1)
+
+add-int/lit16 vA, vB, 0xFFFF
+Twos-complement addition, that is:
+vA = vB + 0xFFFF
+
+rsub-int vA, vB, 0xFFFF
+Twos-complement reverse subtraction, that is:
+vA = 0xFFFF - vB
+
+mul-int/lit16 vA, vB, 0xFFFF
+Twos-complement multiplication, that is:
+vA = vB * 0xFFFF
+
+div-int/lit16 vA, vB, 0xFFFF
+Twos-complement division, that is:
+vA = vB / 0xFFFF
+
+rem-int/lit16 vA, vB, 0xFFFF
+Twos-complement remainder after division, that is:
+vA = vB % 0xFFFF
+
+and-int/lit16 vA, vB, 0xFFFF
+Bitwise AND operation, that is:
+vA = vB & 0xFFFF
+
+or-int/lit16 vA, vB, 0xFFFF
+Bitwise OR operation, that is:
+vA = vB | 0xFFFF
+
+xor-int/lit16 vA, vB, 0xFFFF
+Bitwise XOR operation, that is:
+vA = vB ^ 0xFFFF
+
+add-int/lit8 vAA, vBB, 0xFF
+Twos-complement addition, that is:
+vAA = vBB + 0xFF
+
+rsub-int/lit8 vAA, vBB, 0xFF
+Twos-complement reverse subtraction, that is:
+vAA = 0xFF - vBB
+
+mul-int/lit8 vAA, vBB, 0xFF
+Twos-complement multiplication, that is:
+vAA = vBB * 0xFF
+
+div-int/lit8 vAA, vBB, 0xFF
+Twos-complement division, that is:
+vAA = vBB / 0xFF
+
+rem-int/lit8 vAA, vBB, 0xFF
+Twos-complement remainder after division, that is:
+vAA = vBB % 0xFF
+
+and-int/lit8 vAA, vBB, 0xFF
+Bitwise AND operation, that is:
+vAA = vBB & 0xFF
+
+or-int/lit8 vAA, vBB, 0xFF
+Bitwise OR operation, that is:
+vAA = vBB | 0xFF
+
+xor-int/lit8 vAA, vBB, 0xFF
+Bitwise XOR operation, that is:
+vAA = vBB^0xFF
+
+shl-int/lit8 vAA, vBB, 0xFF
+Bitwise left shift, that is:
+vAA = vBB << 0xFF
+
+shr-int/lit8 vAA, vBB, 0xFF
+Bitwise signed right shift, that is:
+vAA = vBB >> 0xFF
+
+ushr-int/lit8 vAA, vBB, 0xFF
+Bitwise unsigned right shift, that is:
+vAA = vBB >>> 0xFF
+
+invoke-polymorphic {vC, vD, vE, vF, vG}, method, prototype
+Invoke the signature polymorphic method, present in Dex files from version 038 onwards..
+
+invoke-polymorphic/range {vCCCC .. vNNNN}, method, prototype
+Invoke the signature polymorphic method, present in Dex files from version 038 onwards..
+
+invoke-custom {vC, vD, vE, vF, vG}, call site
+Resolves and invokes the call site, present in Dex files from version 038 onwards.
+
+invoke-custom/range {vCCCC .. vNNNN}, call point
+Resolves and invokes the call site, present in Dex files from version 038 onwards.
+
+const-method-handle vAA, method handle
+Move a reference to the method handle into the vAA register, present in Dex files from version 039 onwards.
+
+const-method-type vAA, method prototype
+Move a reference to the method prototype into the vAA register, present in Dex files from version 039 onwards.
