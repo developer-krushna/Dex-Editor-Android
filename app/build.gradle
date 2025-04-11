@@ -34,5 +34,9 @@ dependencies {
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
     implementation 'io.github.skylot:jadx-core:1.4.7'
     implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
+    implementation "androidx.preference:preference:1.2.1"
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    compile 'com.github.angads25:filepicker:1.1.1'
 
 }
