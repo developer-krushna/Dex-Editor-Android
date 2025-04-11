@@ -1,7 +1,7 @@
 
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
-* Copyright 2024, developer-krushna
+* Copyright 2024-25, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -668,6 +668,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 						menu.add(6, 6, 6, "Copy method invoke code"); // Generate invoke instruction
 						menu.add(7, 7, 7, "View flowchart");       // Show method flowchart
 						menu.add(8, 8, 8, "Smali to Java");        // Convert smali to Java
+						menu.add(11, 11, 11, "AI Explanation");
 					}
 					
 					// Set click listener for popup menu items
@@ -734,6 +735,13 @@ public class SmaliMethodListFragment extends DialogFragment {
 								// Generate and copy smali put instruction for field
 								SmaliFieldAccessParser parser3 = new SmaliFieldAccessParser(fullClassName);
 								copiedToClipboard(parser3.generatePutCode(item.get("FullMethodOrField").toString()));
+								return true;
+								
+								case 11:  // AI Explanation 
+								SmaliMethodBody smaliMethodBody2 = new SmaliMethodBody(smaliFilePath, new String[]{methodOrFieldInfo.get(position).get("MethodOrFieldName").toString()}, false);
+								Intent intent = new Intent(getContext().getApplicationContext(), AIOverViewActivity.class);
+								intent.putExtra("smali", smaliMethodBody2.parseClassInSmali());
+								startActivity(intent);
 								return true;
 								
 								default:
