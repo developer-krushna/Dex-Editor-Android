@@ -1,6 +1,6 @@
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
-* Copyright 2024, developer-krushna
+* Copyright 2024-25, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
