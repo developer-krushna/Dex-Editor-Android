@@ -2,7 +2,6 @@
 <resources>
     <string name="close_btn">Close</string>
     <string name="error_title">Error</string>
-    <!-- strings.xml -->
     <string name="select_all">Select All</string>
     <string name="copy">Copy</string>
     <string name="paste">Paste</string>
@@ -10,4 +9,9 @@
     <string name="translate">Translate</string>
     <string name="cut">Cut</string>
     <string name="long_select">Long Select</string>
+    <string name="link">Open link</string>
+    <string name="comment">Toggle comment</string>
+    <string name="share">Share text</string>
+    <string name="customize">Customize</string>
+    <string name="delete">Delete</string>
 </resources>
