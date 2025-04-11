@@ -1,55 +1,75 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="modder.hub.dexeditor">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE" />
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:hardwareAccelerated="true"
+            android:supportsPictureInPicture="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".SettingsActivityActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:hardwareAccelerated="true"
+            android:supportsPictureInPicture="true" />
+        <activity
+            android:name=".SettingsActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:hardwareAccelerated="true"
+            android:supportsPictureInPicture="true" />
+        <activity
+            android:name=".DebugActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.DebugActivity" />
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="modder.hub.dexeditor.androidx-startup"
+            android:exported="false">
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup" />
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup" />
+        </provider>
+        <activity
+            android:name="modder.hub.dexeditor.activity.DexEditorActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name="modder.hub.dexeditor.activity.JavaViewActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name="modder.hub.dexeditor.activity.TextEditorActivity"
+            android:configChanges="orientation|screenSize" />
 
-<manifest
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	package="modder.hub.dexeditor">
-	<uses-permission android:name="android.permission.INTERNET" />
-	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-	<application
-		android:allowBackup="true"
-		android:icon="@mipmap/ic_launcher"
-		android:label="@string/app_name"
-		android:requestLegacyExternalStorage="true"
-		android:usesCleartextTraffic="true"
-		android:theme="@style/AppTheme">
-		<activity
-			android:name=".MainActivity"
-			android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
-			android:hardwareAccelerated="true"
-			android:supportsPictureInPicture="true"
-			android:screenOrientation="portrait">
-			<intent-filter>
-				<action android:name="android.intent.action.MAIN" />
-				<category android:name="android.intent.category.LAUNCHER" />
-			</intent-filter>
-		</activity>
-		<activity
-			android:name=".DebugActivity"
-			android:screenOrientation="portrait"
-			android:theme="@style/AppTheme.DebugActivity" />
-		<provider
-			android:name="androidx.startup.InitializationProvider"
-			android:authorities="modder.hub.dexeditor.androidx-startup"
-			android:exported="false">
-			<meta-data
-				android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-				android:value="androidx.startup" />
-			<meta-data
-				android:name="androidx.emoji2.text.EmojiCompatInitializer"
-				android:value="androidx.startup" />
-		</provider>
-		<activity
-			android:name="modder.hub.dexeditor.activity.DexEditorActivity"
-			android:configChanges="orientation|screenSize" />
-		<activity
-			android:name="modder.hub.dexeditor.activity.JavaViewActivity"
-			android:configChanges="orientation|screenSize" />
-		<activity
-			android:name="modder.hub.dexeditor.activity.TextEditorActivity"
-			android:configChanges="orientation|screenSize" />
-		<uses-library
-			android:name="org.apache.http.legacy"
-			android:required="false" />
-	</application>
-</manifest>
+
+        <activity
+            android:name="modder.hub.dexeditor.activity.EditFloatingMenusActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name="modder.hub.dexeditor.activity.SettingsActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name="modder.hub.dexeditor.activity.ImageViewerActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name="modder.hub.dexeditor.activity.AIOverViewActivity"
+            android:configChanges="orientation|screenSize" />
+    </application>
+</manifest>
