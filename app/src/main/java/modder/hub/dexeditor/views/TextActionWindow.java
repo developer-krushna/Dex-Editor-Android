@@ -1,6 +1,6 @@
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
-* Copyright 2024, developer-krushna
+* Copyright 2024-2025, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,38 +36,69 @@
 
 package modder.hub.dexeditor.views;
 
-import android.content.res.ColorStateList;
+import android.content.Context;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.RippleDrawable;
+import android.Manifest;
+import android.animation.*;
+import android.app.*;
+import android.app.Activity;
+import android.content.*;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.*;
+import android.graphics.*;
+import android.graphics.drawable.*;
+import android.media.*;
+import android.net.*;
+import android.os.*;
+import android.text.*;
+import android.text.style.*;
+import android.util.*;
+import android.view.*;
+import android.view.View.*;
+import android.view.animation.*;
+import android.webkit.*;
+import android.widget.*;
+import android.content.res.*;
+import android.graphics.*;
+import android.content.*;
+import android.graphics.drawable.*;
+import android.content.SharedPreferences;
 import android.os.Build;
-import android.view.LayoutInflater;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.TooltipCompat;
-import io.github.rosemoe.sora.event.Event;
-import io.github.rosemoe.sora.event.EventReceiver;
-import io.github.rosemoe.sora.event.HandleStateChangeEvent;
-import io.github.rosemoe.sora.event.LongPressEvent;
-import io.github.rosemoe.sora.event.ScrollEvent;
-import io.github.rosemoe.sora.event.SelectionChangeEvent;
-import io.github.rosemoe.sora.event.Unsubscribe;
+import io.github.rosemoe.sora.event.*;
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.EditorTouchEventHandler;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
+import io.github.rosemoe.sora.text.CharPosition;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import modder.hub.dexeditor.R;
+import modder.hub.dexeditor.activity.*;
+
 /*
 Author @developer-krushna
-Code fixed comments by ChatGPT
-Special thanks to @AndroidPrime for
-peoviding instructions about sora editor functinalities
+Code fixed/enhancement/some hidden ideas/comments by ChatGPT
 */
+
+
 public class TextActionWindow extends EditorTextActionWindow implements View.OnLongClickListener {
 	private static final long DISPLAY_DELAY = 200;
 	private ItemClickCallBack actionCallback;
@@ -87,6 +118,27 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	private ImageButton selectAllButton;
 	private String selectedText;
 	private ImageButton translateButton;
+	private ImageButton commentButton;
+	private ImageButton shareButton;
+	private ImageButton openLinkButton;
+	private ImageButton customizeButton;
+	private ImageButton deleteButton;
+	
+	private Map<String, ImageButton> buttonMap = new HashMap<>();
+	private ArrayList<String> menuItems = new ArrayList<>();
+	private static final Set<String> VALID_TLDS = new HashSet<>();
+	
+	static {
+		VALID_TLDS.add("com");
+		VALID_TLDS.add("org");
+		VALID_TLDS.add("net");
+		VALID_TLDS.add("in");
+		VALID_TLDS.add("cn");
+		VALID_TLDS.add("io");
+		VALID_TLDS.add("co");
+		VALID_TLDS.add("ai");
+	}
+	
 	
 	public interface ItemClickCallBack {
 		void onClickGoTo(View view, String text);
@@ -95,11 +147,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	}
 	
 	public TextActionWindow(CodeEditor codeEditor) {
-		super(codeEditor);
-		this.isEnabled = true;
-		this.extractedTextWithLAndSemiColon = "";
-		this.selectedText = null;
-		this.codeEditor = codeEditor;
+		this(codeEditor, null);
 	}
 	
 	public TextActionWindow(final CodeEditor codeEditor, ItemClickCallBack actionCallback) {
@@ -111,79 +159,303 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		this.actionCallback = actionCallback;
 		this.touchEventHandler = codeEditor.getEventHandler();
 		
-		View inflatedView = LayoutInflater.from(codeEditor.getContext()).inflate(R.layout.text_action_panel, (ViewGroup) null);
+		// Create root container
+		FrameLayout rootContainer = new FrameLayout(codeEditor.getContext());
+		this.rootView = rootContainer;
 		
-		this.selectAllButton = (ImageButton) inflatedView.findViewById(R.id.panel_btn_select_all);
-		this.cutButton = (ImageButton) inflatedView.findViewById(R.id.panel_btn_cut);
-		this.copyButton = (ImageButton) inflatedView.findViewById(R.id.panel_btn_copy);
-		this.longSelectButton = (ImageButton) inflatedView.findViewById(R.id.panel_btn_long_select);
-		this.pasteButton = (ImageButton) inflatedView.findViewById(R.id.panel_btn_paste);
-		this.gotoButton = (ImageButton) inflatedView.findViewById(R.id.goto_btn);
-		this.translateButton = (ImageButton) inflatedView.findViewById(R.id.translate_btn);
+		// Load menu items from JSON
+		loadMenuItemsFromJson();
 		
-		this.selectAllButton.setOnClickListener(this);
-		this.cutButton.setOnClickListener(this);
-		this.copyButton.setOnClickListener(this);
-		this.pasteButton.setOnClickListener(this);
-		this.longSelectButton.setOnClickListener(this);
-		this.gotoButton.setOnClickListener(this);
-		this.translateButton.setOnClickListener(this);
-		this.translateButton.setOnLongClickListener(this);
+		// Initialize buttons
+		initializeButtons(rootContainer);
 		
-		/* Tooltip text */
-		setTooltipText(this.copyButton, codeEditor.getContext().getString(R.string.copy));
-		setTooltipText(this.pasteButton, codeEditor.getContext().getString(R.string.paste));
-		setTooltipText(this.translateButton, codeEditor.getContext().getString(R.string.translate));
-		setTooltipText(this.gotoButton, codeEditor.getContext().getString(R.string.go_to));
-		setTooltipText(this.longSelectButton, codeEditor.getContext().getString(R.string.long_select));
-		setTooltipText(this.cutButton, codeEditor.getContext().getString(R.string.cut));
-		setTooltipText(this.selectAllButton, codeEditor.getContext().getString(R.string.select_all));
-		
-		
+		// Set background
 		GradientDrawable backgroundDrawable = new GradientDrawable();
 		backgroundDrawable.setCornerRadius(codeEditor.getDpUnit() * 5.0f);
 		backgroundDrawable.setColor(-1);
-		inflatedView.setBackground(backgroundDrawable);
-		setContentView(inflatedView);
+		rootContainer.setBackground(backgroundDrawable);
+		
+		setContentView(rootContainer);
 		setSize(0, (int) (this.codeEditor.getDpUnit() * 48.0f));
-		this.rootView = inflatedView;
+		
 		updateButtonStates();
-		codeEditor.subscribeEvent(SelectionChangeEvent.class, new EventReceiver() {
-			public final void onReceive(Event event, Unsubscribe unsubscribe) {
-				TextActionWindow.this.onSelectionChanged(codeEditor, (SelectionChangeEvent) event, unsubscribe);
+		
+		// Event subscriptions
+		codeEditor.subscribeEvent(SelectionChangeEvent.class, new EventReceiver<SelectionChangeEvent>() {
+			@Override
+			public void onReceive(SelectionChangeEvent event, Unsubscribe unsubscribe) {
+				onSelectionChanged(codeEditor, event, unsubscribe);
 			}
 		});
-		codeEditor.subscribeEvent(ScrollEvent.class, new EventReceiver() {
-			public final void onReceive(Event event, Unsubscribe unsubscribe) {
-				TextActionWindow.this.onScrollEvent((ScrollEvent) event, unsubscribe);
+		
+		codeEditor.subscribeEvent(ScrollEvent.class, new EventReceiver<ScrollEvent>() {
+			@Override
+			public void onReceive(ScrollEvent event, Unsubscribe unsubscribe) {
+				onScrollEvent(event, unsubscribe);
 			}
 		});
-		codeEditor.subscribeEvent(HandleStateChangeEvent.class, new EventReceiver() {
-			public final void onReceive(Event event, Unsubscribe unsubscribe) {
-				TextActionWindow.this.onHandleStateChanged((HandleStateChangeEvent) event, unsubscribe);
+		
+		codeEditor.subscribeEvent(HandleStateChangeEvent.class, new EventReceiver<HandleStateChangeEvent>() {
+			@Override
+			public void onReceive(HandleStateChangeEvent event, Unsubscribe unsubscribe) {
+				onHandleStateChanged(event, unsubscribe);
 			}
 		});
-		codeEditor.subscribeEvent(LongPressEvent.class, new EventReceiver() {
-			public final void onReceive(Event event, Unsubscribe unsubscribe) {
-				TextActionWindow.this.onLongPressEvent(codeEditor, (LongPressEvent) event, unsubscribe);
+		
+		codeEditor.subscribeEvent(LongPressEvent.class, new EventReceiver<LongPressEvent>() {
+			@Override
+			public void onReceive(LongPressEvent event, Unsubscribe unsubscribe) {
+				onLongPressEvent(codeEditor, event, unsubscribe);
 			}
 		});
-		codeEditor.subscribeEvent(HandleStateChangeEvent.class, new EventReceiver() {
-			public final void onReceive(Event event, Unsubscribe unsubscribe) {
-				TextActionWindow.this.onHandleStateChangedFinal(codeEditor, (HandleStateChangeEvent) event, unsubscribe);
-			}
-		});
+		
 		getPopup().setAnimationStyle(R.style.text_action_popup_animation);
 	}
+	
+	private void loadMenuItemsFromJson() {
+		// 1. Initialize SharedPreferences
+		SharedPreferences prefs = codeEditor.getContext()
+		.getSharedPreferences("editor_prefs", Context.MODE_PRIVATE);
+		
+		// 2. Check if config exists in SharedPreferences
+		String jsonConfig = prefs.getString("menu_order", null);
+		
+		// 3. If not exists, save default config first
+		if (jsonConfig == null) {
+			jsonConfig = 
+			"[" +
+			"{\"id\":\"panel_btn_select_all\",\"title\":\"Select All\",\"disabled\":false}," +
+			"{\"id\":\"panel_btn_copy\",\"title\":\"Copy\",\"disabled\":false}," +
+			"{\"id\":\"panel_btn_paste\",\"title\":\"Paste\",\"disabled\":false}," +
+			"{\"id\":\"goto_btn\",\"title\":\"Go To\",\"disabled\":false}," +
+			"{\"id\":\"translate_btn\",\"title\":\"Translate\",\"disabled\":false}," +
+			"{\"id\":\"panel_btn_cut\",\"title\":\"Cut\",\"disabled\":false}," +
+			"{\"id\":\"comment_btn\",\"title\":\"Toggle comment\",\"disabled\":false}," +
+			"{\"id\":\"openLink_btn\",\"title\":\"Open link\",\"disabled\":false}," +
+			"{\"id\":\"share_btn\",\"title\":\"Share\",\"disabled\":false}," +
+			"{\"id\":\"panel_btn_long_select\",\"title\":\"Long Select\",\"disabled\":false}," +
+			"{\"id\":\"delete_btn\",\"title\":\"Delete\",\"disabled\":false}," +
+			"{\"id\":\"customize_btn\",\"title\":\"Customize\",\"disabled\":false}" +
+			"]";
+			prefs.edit().putString("menu_order", jsonConfig).apply();
+		}
+		
+		// 4. Parse the JSON (only using IDs as before)
+		try {
+			JSONArray jsonArray = new JSONArray(jsonConfig);
+			menuItems.clear();
+			
+			for (int i = 0; i < jsonArray.length(); i++) {
+				JSONObject item = jsonArray.getJSONObject(i);
+				// Only add if not disabled
+				if (!item.optBoolean("disabled", false)) {
+					menuItems.add(item.getString("id"));
+				}
+			}
+		} catch (Exception e) {
+			// Fallback to default order (without titles)
+			menuItems.clear();
+			menuItems.add("panel_btn_select_all");
+			menuItems.add("panel_btn_copy");
+			menuItems.add("panel_btn_paste");
+			menuItems.add("goto_btn");
+			menuItems.add("translate_btn");
+			menuItems.add("panel_btn_cut");
+			menuItems.add("comment_btn");
+			menuItems.add("openLink_btn");
+			menuItems.add("share_btn");
+			menuItems.add("panel_btn_long_select");
+			menuItems.add("delete_btn");
+		}
+	}
+	
+	private void initializeButtons(ViewGroup parent) {
+		parent.removeAllViews();
+		Context context = codeEditor.getContext();
+		
+		HorizontalScrollView scrollView = new HorizontalScrollView(context);
+		LinearLayout container = new LinearLayout(context);
+		container.setOrientation(LinearLayout.HORIZONTAL);
+		container.setGravity(Gravity.CENTER_VERTICAL);
+		scrollView.addView(container);
+		parent.addView(scrollView);
+		
+		// Get selectable background
+		TypedValue outValue = new TypedValue();
+		context.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+		
+		int buttonSize = (int) (45 * codeEditor.getDpUnit());
+		LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(buttonSize, buttonSize);
+		
+		// Define all possible buttons with their resources
+		Map<String, ButtonConfig> allButtons = new HashMap<>();
+		allButtons.put("panel_btn_select_all", new ButtonConfig(R.drawable.ic_selectall_mt, R.string.select_all));
+		allButtons.put("panel_btn_copy", new ButtonConfig(R.drawable.ic_copy_mt, R.string.copy));
+		allButtons.put("panel_btn_paste", new ButtonConfig(R.drawable.ic_paste_mt, R.string.paste));
+		allButtons.put("goto_btn", new ButtonConfig(R.drawable.ic_goto_mt, R.string.go_to));
+		allButtons.put("translate_btn", new ButtonConfig(R.drawable.ic_translate_mt, R.string.translate));
+		allButtons.put("panel_btn_cut", new ButtonConfig(R.drawable.ic_cut_mt, R.string.cut));
+		allButtons.put("comment_btn", new ButtonConfig(R.drawable.ic_hash_mt, R.string.comment));
+		allButtons.put("openLink_btn", new ButtonConfig(R.drawable.ic_link_mt, R.string.link));
+		allButtons.put("share_btn", new ButtonConfig(R.drawable.ic_share_mt, R.string.share));
+		allButtons.put("panel_btn_long_select", new ButtonConfig(R.drawable.ic_text_select_start_mt, R.string.long_select));
+		allButtons.put("delete_btn", new ButtonConfig(R.drawable.ic_delete_mt, R.string.delete));
+		allButtons.put("customize_btn", new ButtonConfig(R.drawable.ic_setting_mt, R.string.customize));
+		
+		// Create buttons in JSON-defined order
+		for (String buttonId : menuItems) {
+			ButtonConfig config = allButtons.get(buttonId);
+			if (config == null) {
+				continue; // Skip unknown button IDs
+			}
+			
+			ImageButton button = new ImageButton(context);
+			button.setTag(buttonId);
+			button.setLayoutParams(params);
+			button.setBackgroundResource(outValue.resourceId);
+			button.setImageResource(config.iconRes);
+			button.setOnClickListener(this);
+			
+			if ("translate_btn".equals(buttonId)) {
+				button.setOnLongClickListener(this);
+			}
+			
+			container.addView(button);
+			buttonMap.put(buttonId, button);
+			
+			setTooltipText(button, context.getString(config.tooltipRes));
+		}
+		
+		// Initialize all button variables
+		this.selectAllButton = buttonMap.get("panel_btn_select_all");
+		this.copyButton = buttonMap.get("panel_btn_copy");
+		this.pasteButton = buttonMap.get("panel_btn_paste"); 
+		this.gotoButton = buttonMap.get("goto_btn");
+		this.translateButton = buttonMap.get("translate_btn");
+		this.cutButton = buttonMap.get("panel_btn_cut");
+		this.longSelectButton = buttonMap.get("panel_btn_long_select");
+		this.commentButton = buttonMap.get("comment_btn");
+		this.openLinkButton = buttonMap.get("openLink_btn");
+		this.shareButton = buttonMap.get("share_btn");
+		this.deleteButton = buttonMap.get("delete_btn");
+		this.customizeButton = buttonMap.get("customize_btn");
+	}
+	
+	private static class ButtonConfig {
+		final int iconRes;
+		final int tooltipRes;
+		
+		ButtonConfig(int iconRes, int tooltipRes) {
+			this.iconRes = iconRes;
+			this.tooltipRes = tooltipRes;
+		}
+	}
+	
+	// Updated setTooltipText with null check
+	public void setTooltipText(View view, String tooltipText) {
+		if (view != null && Build.VERSION.SDK_INT >= 26) {
+			TooltipCompat.setTooltipText(view, tooltipText);
+		}
+	}
+	
+	
+	@Override
+	public void onClick(View view) {
+		String buttonId = (String) view.getTag();
+		Cursor cursor = this.codeEditor.getCursor();
+		if (buttonId == null) return;
+		
+		switch (buttonId) {
+			case "panel_btn_select_all":
+			this.codeEditor.selectAll();
+			break;
+			case "panel_btn_cut":
+			if (cursor.isSelected()) {
+				this.codeEditor.cutText();
+			}
+			break;
+			case "panel_btn_copy":
+			this.codeEditor.copyText();
+			this.codeEditor.setSelection(cursor.getRightLine(), cursor.getRightColumn());
+			break;
+			case "panel_btn_paste":
+			this.codeEditor.pasteText();
+			this.codeEditor.setSelection(cursor.getRightLine(), cursor.getRightColumn());
+			break;
+			case "panel_btn_long_select":
+			this.codeEditor.beginLongSelect();
+			break;
+			case "goto_btn":
+			this.actionCallback.onClickGoTo(view, this.extractedTextWithLAndSemiColon);
+			break;
+			case "comment_btn" :
+			toggleComment();
+			break;
+			case "delete_btn" :
+			this.codeEditor.deleteText();
+			break;
+			case "customize_btn" :
+			Intent intent = new Intent(codeEditor.getContext(), EditFloatingMenusActivity.class);
+			codeEditor.getContext().startActivity(intent);
+			break;
+			case "share_btn" :
+			if (cursor.isSelected()) {
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				this.selectedText = selectedText;
+				if (selectedText != null) {
+					try{
+						Intent shareIntent = new Intent(Intent.ACTION_SEND);
+						shareIntent.setType("text/plain");
+						shareIntent.putExtra(Intent.EXTRA_TEXT, selectedText);
+						codeEditor.getContext().startActivity(Intent.createChooser(shareIntent, "Share Text"));
+					}catch(Exception e){}
+				}
+			}
+			break;
+			case "openLink_btn" :
+			if (cursor.isSelected()) {
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				this.selectedText = selectedText;
+				if (selectedText != null) {
+					openLinkInBrowser(codeEditor.getContext(), selectedText);
+				}
+			}
+			break;
+			case "translate_btn":
+			if (cursor.isSelected()) {
+				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+				this.selectedText = selectedText;
+				if (selectedText != null) {
+					this.actionCallback.onClickTranslate(view, selectedText);
+				}
+			}
+			break;
+		}
+		dismiss();
+	}
+	
+	@Override
+	public boolean onLongClick(View view) {
+		String buttonId = (String) view.getTag();
+		if (buttonId != null && buttonId.equals("translate_btn")) {
+			this.actionCallback.onLongClickTranslate(view);
+			dismiss();
+			return true;
+		}
+		return false;
+	}
+	
 	
 	private void onSelectionChanged(CodeEditor codeEditor, SelectionChangeEvent selectionChangeEvent, Unsubscribe unsubscribe) {
 		updateButtonStates();
 		String extractedText = extractTextWithLAndSemiColon(codeEditor.getText().getLine(codeEditor.getCursor().getLeftLine()).toString(), codeEditor.getCursor().getLeftColumn());
 		this.extractedTextWithLAndSemiColon = extractedText;
-		if (extractedText.equals("NotAvailable")) {
-			this.gotoButton.setVisibility(View.GONE);
-		} else {
-			this.gotoButton.setVisibility(View.VISIBLE);
+		if(gotoButton != null){
+			if (extractedText.equals("NotAvailable")) {
+				this.gotoButton.setVisibility(View.GONE);
+			} else {
+				this.gotoButton.setVisibility(View.VISIBLE);
+			}
 		}
 	}
 	
@@ -232,55 +504,6 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		}, 100L);
 	}
 	
-	public void onClick(View view) {
-		int id = view.getId();
-		if (id == R.id.panel_btn_select_all) {
-			this.codeEditor.selectAll();
-			return;
-		}
-		if (id == R.id.panel_btn_cut) {
-			if (this.codeEditor.getCursor().isSelected()) {
-				this.codeEditor.cutText();
-			}
-		} else if (id == R.id.panel_btn_paste) {
-			this.codeEditor.pasteText();
-			CodeEditor codeEditor = this.codeEditor;
-			codeEditor.setSelection(codeEditor.getCursor().getRightLine(), this.codeEditor.getCursor().getRightColumn());
-		} else if (id == R.id.panel_btn_copy) {
-			this.codeEditor.copyText();
-			CodeEditor codeEditor2 = this.codeEditor;
-			codeEditor2.setSelection(codeEditor2.getCursor().getRightLine(), this.codeEditor.getCursor().getRightColumn());
-		} else if (id == R.id.panel_btn_long_select) {
-			this.codeEditor.beginLongSelect();
-		} else if (id == R.id.goto_btn) {
-			this.actionCallback.onClickGoTo(view, this.extractedTextWithLAndSemiColon);
-		} else if (id == R.id.translate_btn) {
-			Cursor cursor = this.codeEditor.getCursor();
-			if (cursor.isSelected()) {
-				String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
-				this.selectedText = selectedText;
-				if (selectedText != null) {
-					this.actionCallback.onClickTranslate(view, selectedText);
-				}
-			}
-		}
-		dismiss();
-	}
-	
-	@Override
-	public boolean onLongClick(View view) {
-		if (view.getId() == R.id.translate_btn) {
-			this.actionCallback.onLongClickTranslate(view);
-		}
-		dismiss();
-		return true;
-	}
-	
-	public void setTooltipText(View view, String tooltipText) {
-		if (Build.VERSION.SDK_INT >= 26) {
-			TooltipCompat.setTooltipText(view, tooltipText);
-		}
-	}
 	
 	private void updateButtonStates() {
 		updatePasteButtonState();
@@ -289,6 +512,10 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		updatePasteButtonVisibility();
 		updateCutButtonVisibility();
 		updateLongSelectButtonVisibility();
+		updateDeleteButtonVisibility();
+		updateShareButtonVisibility();
+		updateOpenLinkButtonVisibility();
+        updateCommentButtonVisibility();
 	}
 	
 	private void updatePasteButtonState() {
@@ -302,7 +529,64 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		} else {
 			visibility = View.GONE;
 		}
-		this.copyButton.setVisibility(visibility);
+		if(copyButton != null){
+			this.copyButton.setVisibility(visibility);
+		}
+	}
+	
+	private void updateOpenLinkButtonVisibility() {
+		int visibility;
+		Cursor cursor = this.codeEditor.getCursor();
+		
+		if (cursor.isSelected()) {
+			String selectedText = getSelectedText(this.codeEditor.getText(), cursor.getLeft(), cursor.getRight());
+			if(isLink(selectedText)){
+				visibility = View.VISIBLE;
+			} else {
+				visibility = View.GONE;
+			}
+		} else {
+			visibility = View.GONE;
+		}
+		if(openLinkButton != null){
+			this.openLinkButton.setVisibility(visibility);
+		}
+	}
+	
+	private void updateDeleteButtonVisibility() {
+		int visibility;
+		if (this.codeEditor.getCursor().isSelected() && this.codeEditor.isEditable()) {
+			visibility = View.VISIBLE;
+		} else {
+			visibility = View.GONE;
+		}
+		if(deleteButton != null){
+			this.deleteButton.setVisibility(visibility);
+		}
+	}
+    
+    private void updateCommentButtonVisibility(){
+        int visibility;
+		if (this.codeEditor.isEditable()) {
+			visibility = View.VISIBLE;
+		} else {
+			visibility = View.GONE;
+		}
+		if(commentButton != null){
+			this.commentButton.setVisibility(visibility);
+		}
+    }
+	
+	private void updateShareButtonVisibility() {
+		int visibility;
+		if (this.codeEditor.getCursor().isSelected()) {
+			visibility = View.VISIBLE;
+		} else {
+			visibility = View.GONE;
+		}
+		if(shareButton != null){
+			this.shareButton.setVisibility(visibility);
+		}
 	}
 	
 	private void updateTranslateButtonVisibility() {
@@ -312,7 +596,9 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		} else {
 			visibility = View.GONE;
 		}
-		this.translateButton.setVisibility(visibility);
+		if(translateButton != null){
+			this.translateButton.setVisibility(visibility);
+		}
 	}
 	
 	private void updatePasteButtonVisibility() {
@@ -322,7 +608,9 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		} else {
 			visibility = View.GONE;
 		}
-		this.pasteButton.setVisibility(visibility);
+		if(pasteButton != null){
+			this.pasteButton.setVisibility(visibility);
+		}
 	}
 	
 	
@@ -342,10 +630,112 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	
 	private void updateLongSelectButtonVisibility() {
 		// If the text is selected then gone the long select button else show
-		if (this.codeEditor.getCursor().isSelected()) {
-			this.longSelectButton.setVisibility(View.GONE);
-		} else {
-			this.longSelectButton.setVisibility(View.VISIBLE);
+		if(longSelectButton != null){
+			if (this.codeEditor.getCursor().isSelected()) {
+				this.longSelectButton.setVisibility(View.GONE);
+			} else {
+				this.longSelectButton.setVisibility(View.VISIBLE);
+			}
+		}
+	}
+	
+	public void toggleComment() {
+		final CodeEditor editor = this.codeEditor;
+		final Content text = editor.getText();
+		final Cursor cursor = editor.getCursor();
+		
+		text.beginBatchEdit();
+		try {
+			if (cursor.isSelected()) {
+				int startLine = cursor.getLeftLine();
+				int endLine = cursor.getRightLine();
+				
+				// Phase 1: Check comment state (single pass)
+				boolean allCommented = true;
+				int[] firstCharPositions = new int[endLine - startLine + 1];
+				
+				for (int i = 0, line = startLine; line <= endLine; line++, i++) {
+					String lineStr = text.getLineString(line);
+					firstCharPositions[i] = getFirstNonWhitespace(lineStr);
+					
+					if (firstCharPositions[i] < lineStr.length() && 
+					lineStr.charAt(firstCharPositions[i]) != '#') {
+						allCommented = false;
+					}
+				}
+				
+				// Phase 2: Apply changes (single pass)
+				for (int i = 0, line = startLine; line <= endLine; line++, i++) {
+					int firstCharPos = firstCharPositions[i];
+					String lineStr = text.getLineString(line);
+					
+					if (firstCharPos >= lineStr.length()) continue;
+					
+					if (allCommented) {
+						if (lineStr.charAt(firstCharPos) == '#') {
+							int endPos = firstCharPos + 1;
+							if (endPos < lineStr.length() && lineStr.charAt(endPos) == ' ') {
+								endPos++;
+							}
+							text.delete(line, firstCharPos, line, endPos);
+						}
+					} else {
+						if (lineStr.charAt(firstCharPos) != '#') {
+							text.insert(line, firstCharPos, "# ");
+						}
+					}
+				}
+				
+				// Restore selection
+				editor.setSelectionRegion(startLine, 0, endLine, text.getColumnCount(endLine));
+			} else {
+				// Optimized single line version
+				int line = cursor.getLeftLine();
+				String lineStr = text.getLineString(line);
+				int firstCharPos = getFirstNonWhitespace(lineStr);
+				
+				if (firstCharPos < lineStr.length()) {
+					if (lineStr.charAt(firstCharPos) == '#') {
+						int endPos = firstCharPos + 1;
+						if (endPos < lineStr.length() && lineStr.charAt(endPos) == ' ') {
+							endPos++;
+						}
+						text.delete(line, firstCharPos, line, endPos);
+					} else {
+						text.insert(line, firstCharPos, "# ");
+					}
+				}
+			}
+		} finally {
+			text.endBatchEdit();
+		}
+	}
+	
+	private int getFirstNonWhitespace(String line) {
+		for (int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+			if (c != ' ' && c != '\t') {
+				return i;
+			}
+		}
+		return line.length();
+	}
+	
+	
+	public static void openLinkInBrowser(Context context, String url) {
+		if (context == null || TextUtils.isEmpty(url)) {
+			return;
+		}
+		String normalizedUrl = normalizeUrl(url);
+		if (normalizedUrl == null) {
+			return;
+		}
+		try {
+			Intent intent = new Intent(Intent.ACTION_VIEW);
+			intent.setData(Uri.parse(normalizedUrl));
+			context.startActivity(intent);
+		} catch (Exception e) {
+			Toast.makeText(context, "No browser available", Toast.LENGTH_SHORT).show();
 		}
 	}
 	
@@ -391,6 +781,66 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		}
 		return "NotAvailable";
 	}
+	
+	public static boolean isLink(String text) {
+		if (TextUtils.isEmpty(text)) {
+			return false;
+		}
+		
+		// Check for full URLs with protocol
+		String urlRegex = "^(https?|ftp)://[\\w.-]+(\\.[a-zA-Z]{2,})+[/\\w.-]*$";
+		
+		// Check for simple domains (without protocol)
+		String domainRegex = "^([\\w-]+\\.)+([a-zA-Z]{2,})$";
+		
+		Pattern urlPattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE);
+		Pattern domainPattern = Pattern.compile(domainRegex, Pattern.CASE_INSENSITIVE);
+		
+		if (urlPattern.matcher(text).matches()) {
+			return true;
+		}
+		
+		if (domainPattern.matcher(text).matches()) {
+			String tld = text.substring(text.lastIndexOf('.') + 1).toLowerCase();
+			return VALID_TLDS.contains(tld);
+		}
+		
+		if (text.toLowerCase().startsWith("www.")) {
+			String rest = text.substring(4);
+			if (domainPattern.matcher(rest).matches()) {
+				String tld = rest.substring(rest.lastIndexOf('.') + 1).toLowerCase();
+				return VALID_TLDS.contains(tld);
+			}
+		}
+		
+		return false;
+	}
+	
+	public static String normalizeUrl(String text) {
+		if (TextUtils.isEmpty(text)) {
+			return null;
+		}
+		
+		// If already starts with http:// or https://
+		if (text.toLowerCase().startsWith("http://") || 
+		text.toLowerCase().startsWith("https://")) {
+			return text;
+		}
+		
+		// If starts with www.
+		if (text.toLowerCase().startsWith("www.")) {
+			return "http://" + text;
+		}
+		
+		// If it's a valid domain without prefix
+		if (isLink(text) && text.contains(".")) {
+			return "http://" + text;
+		}
+		
+		return null;
+	}
+	
+	
 	
 	public static void applyRippleEffect(View view, String backgroundColor, String strokeColor, double cornerRadius, double strokeWidth, String rippleColor) {
 		GradientDrawable gradientDrawable = new GradientDrawable();

@@ -1,6 +1,6 @@
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
-* Copyright 2024, developer-krushna
+* Copyright 2024-25, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -62,12 +62,7 @@ public class AlertProgress {
 	
 	public AlertProgress(Activity activity) {
 		this.activity = activity;
-		
 		process = new AlertDialog.Builder(activity);
-		
-		// Inflate and set the layout for the dialog
-		// Pass null as the parent view because its going in the dialog layout
-		
 		View view = View.inflate(activity, R.layout.progress_dlg, null);
 		textview_mesage = view.findViewById(R.id.message);
 		progress = view.findViewById(R.id.progress);
