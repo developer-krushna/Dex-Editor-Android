@@ -85,9 +85,9 @@ public class ClassTree {
 	private final Map<String, List<String>> removedClassMap = new HashMap<>();
 	private final Map<String, List<String>> editedClassMap = new HashMap<>();
 	
-	private static final String ALL_CLASSES_JSON = "/sdcard/Android/data/modder.hub.dexeditor/allclasses.json";
-	private static final String DELETED_CLASSES_JSON = "/sdcard/Android/data/modder.hub.dexeditor/deletedclasses.json";
-	private static final String EDITED_CLASSES_JSON = "/sdcard/Android/data/modder.hub.dexeditor/editedclasses.json";
+	private static final String ALL_CLASSES_JSON = "/data/user/0/modder.hub.dexeditor/allclasses.json";
+	private static final String DELETED_CLASSES_JSON = "/data/user/0/modder.hub.dexeditor/deletedclasses.json";
+	private static final String EDITED_CLASSES_JSON = "/data/user/0/modder.hub.dexeditor/editedclasses.json";
 	
 	byte[] data;
 	byte[] input;
