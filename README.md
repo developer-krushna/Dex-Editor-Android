@@ -12,6 +12,7 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [x] Smali method flow diagram
 - [x] Editing Smali with best code editor
 - [x] Jump to another class
+- [x] Jump to smali lables (cond, try_catch etc.) within method body
 - [x] Custom editor selection menu (Calling translation apps)
 - [x] Dex compilation with real time progress update
 - [x] Supported propper error handling during smali compilation 
