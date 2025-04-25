@@ -63,11 +63,11 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputLayout;
 import java.io.File;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import modder.hub.dexeditor.activity.*;
-import modder.hub.dexeditor.utils.FilePermissionManager;
+import modder.hub.dexeditor.utils.*;
 
 public class MainActivity extends AppCompatActivity implements FilePermissionManager.PermissionCallback {
 	// UI Components
@@ -186,29 +186,25 @@ public class MainActivity extends AppCompatActivity implements FilePermissionMan
 			public void onClick(View view) {
 				String initialPath = dexFilePathEditText.getText().toString();
 				
-				dexEditorIntent.setClass(MainActivity.this.getApplicationContext(), DexEditorActivity.class);
-				dexEditorIntent.putExtra("Path", initialPath);
-				startActivity(dexEditorIntent);
 				
-				/*
 				DexFileSelector dexSelector = new DexFileSelector(MainActivity.this, initialPath);
 				dexSelector.setOnFilesSelectedListener(new DexFileSelector.OnFilesSelectedListener() {
-				@Override
-				public void onFilesSelected(List<String> selectedFilePaths) {
-				// Convert List<String> to ArrayList<String> (if needed for Intent)
-				ArrayList<String> filePathsArrayList = new ArrayList<String>(selectedFilePaths);
-				
-				// Set up the Intent
-				dexEditorIntent.setClass(MainActivity.this, DexEditorActivity.class);
-				dexEditorIntent.putStringArrayListExtra("SelectedDexFiles", filePathsArrayList);
-				
-				// Start the activity
-				startActivity(dexEditorIntent);
-				}
+					@Override
+					public void onFilesSelected(List<String> selectedFilePaths) {
+						// Convert List<String> to ArrayList<String> (if needed for Intent)
+						ArrayList<String> filePathsArrayList = new ArrayList<String>(selectedFilePaths);
+						
+						// Set up the Intent
+						dexEditorIntent.setClass(MainActivity.this, DexEditorActivity.class);
+						dexEditorIntent.putStringArrayListExtra("SelectedDexFiles", filePathsArrayList);
+						
+						// Start the activity
+						startActivity(dexEditorIntent);
+					}
 				});
 				dexSelector.showDialog();
 				
-				*/
+				
 			}
 		});
 		
