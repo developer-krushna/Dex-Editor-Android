@@ -399,7 +399,7 @@ public class SmaliMethodListFragment extends DialogFragment {
 					}
 					
 					// Check if the line defines a class
-					else if (tokens[0].equals(".class") && currentLineNumber == 1 && trimmedLine.endsWith(";")) {
+					else if (tokens[0].equals(".class") && trimmedLine.endsWith(";")) {
 						String className = tokens[tokens.length - 1]; // Last token is the class name
 						fullClassName = className;
 						// Read the next line to check for the superclass
