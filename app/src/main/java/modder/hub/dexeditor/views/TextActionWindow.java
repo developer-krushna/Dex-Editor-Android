@@ -445,20 +445,6 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		return false;
 	}
 	
-	
-	private void onSelectionChanged(CodeEditor codeEditor, SelectionChangeEvent selectionChangeEvent, Unsubscribe unsubscribe) {
-		updateButtonStates();
-		String extractedText = extractTextWithLAndSemiColon(codeEditor.getText().getLine(codeEditor.getCursor().getLeftLine()).toString(), codeEditor.getCursor().getLeftColumn());
-		this.extractedTextWithLAndSemiColon = extractedText;
-		if(gotoButton != null){
-			if (extractedText.equals("NotAvailable")) {
-				this.gotoButton.setVisibility(View.GONE);
-			} else {
-				this.gotoButton.setVisibility(View.VISIBLE);
-			}
-		}
-	}
-	
 	private void onScrollEvent(ScrollEvent scrollEvent, Unsubscribe unsubscribe) {
 		long lastScrollTime = this.lastScrollTime;
 		long currentTime = System.currentTimeMillis();
@@ -483,6 +469,29 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 				displayWindow();
 			}
 			longPressEvent.intercept(2);
+		}
+	}
+	
+	private void onSelectionChanged(CodeEditor codeEditor, SelectionChangeEvent selectionChangeEvent, Unsubscribe unsubscribe) {
+		updateButtonStates();
+		
+		int line = codeEditor.getCursor().getLeftLine();
+		int column = codeEditor.getCursor().getLeftColumn();
+		
+		String lineText = codeEditor.getText().getLine(line).toString();
+		String extractedText = extractTextWithLAndSemiColon(lineText, column);
+		
+		if ("NotAvailable".equals(extractedText)) {
+			if(column != 1){
+				extractedText = extractSmaliLabel(lineText, (column - 1));
+			} else {
+				extractedText = extractSmaliLabel(lineText, column);
+			}
+		}
+		this.extractedTextWithLAndSemiColon = extractedText;
+        
+		if (gotoButton != null) {
+			gotoButton.setVisibility("NotAvailable".equals(extractedText) ? View.GONE : View.VISIBLE);
 		}
 	}
 	
@@ -515,7 +524,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		updateDeleteButtonVisibility();
 		updateShareButtonVisibility();
 		updateOpenLinkButtonVisibility();
-        updateCommentButtonVisibility();
+		updateCommentButtonVisibility();
 	}
 	
 	private void updatePasteButtonState() {
@@ -564,9 +573,9 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 			this.deleteButton.setVisibility(visibility);
 		}
 	}
-    
-    private void updateCommentButtonVisibility(){
-        int visibility;
+	
+	private void updateCommentButtonVisibility(){
+		int visibility;
 		if (this.codeEditor.isEditable()) {
 			visibility = View.VISIBLE;
 		} else {
@@ -575,7 +584,7 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 		if(commentButton != null){
 			this.commentButton.setVisibility(visibility);
 		}
-    }
+	}
 	
 	private void updateShareButtonVisibility() {
 		int visibility;
@@ -765,20 +774,65 @@ public class TextActionWindow extends EditorTextActionWindow implements View.OnL
 	}
 	
 	public String extractTextWithLAndSemiColon(String text, int position) {
-		Matcher matcher = Pattern.compile("(L[^;]+;)").matcher(text);
+		Matcher matcher = Pattern.compile("(L(?:[^;L]|L(?!\\w*/))+(?:/[^;L]|L(?!\\w*/))*;)").matcher(text);
 		while (matcher.find()) {
 			if (matcher.start() <= position && position < matcher.end()) {
 				return matcher.group();
 			}
 		}
+		
 		Matcher matcher2 = Pattern.compile(";->([^:()]+):|;->([^()]+)\\(([^)]*)\\)").matcher(text);
 		if (matcher2.find()) {
-			if ((matcher2.start(1) == -1 || matcher2.start(1) - 2 > position || position >= matcher2.end(1)) && (matcher2.start(2) == -1 || matcher2.start(2) - 2 > position || position >= matcher2.end(2))) {
-				return (matcher2.start(3) == -1 || text.charAt(matcher2.start(3) - 1) == '(' || text.charAt(matcher2.start(3) - 1) == ':' || position != matcher2.start(3) - 1) ? "NotAvailable" : matcher2.group(3);
+			if ((matcher2.start(1) == -1 || matcher2.start(1) - 2 > position || position >= matcher2.end(1)) && 
+			(matcher2.start(2) == -1 || matcher2.start(2) - 2 > position || position >= matcher2.end(2))) {
+				return (matcher2.start(3) == -1 || text.charAt(matcher2.start(3) - 1) == '(' || 
+				text.charAt(matcher2.start(3) - 1) == ':' || position != matcher2.start(3) - 1) ? 
+				"NotAvailable" : matcher2.group(3);
 			}
 			int lastSpaceIndex = text.lastIndexOf(32, Math.max(matcher2.start(1), matcher2.start(2)) - 2);
 			return lastSpaceIndex != -1 ? text.substring(lastSpaceIndex + 1) : "NotAvailable";
 		}
+		return "NotAvailable";
+	}
+	
+	public static String extractSmaliLabel(String text, int position) {
+		if (text == null || text.isEmpty() || position < 0 || position >= text.length()) {
+			return "NotAvailable";
+		}
+		
+		int lineStart = position;
+		while (lineStart > 0 && text.charAt(lineStart-1) != '\n') lineStart--;
+		int lineEnd = position;
+		while (lineEnd < text.length() && text.charAt(lineEnd) != '\n') lineEnd++;
+		String currentLine = text.substring(lineStart, lineEnd).trim();
+		
+		if (currentLine.startsWith(".field") || 
+		currentLine.matches("^[is]?[g|p]et(-\\w+)?\\s.*") ||
+		currentLine.matches("^\\s*L[^;]+;->\\w+:")) {
+			return "NotAvailable";
+		}
+		
+		Pattern pattern = Pattern.compile("(:[a-zA-Z_0-9]+)");
+		Matcher matcher = pattern.matcher(text);
+		
+		while (matcher.find()) {
+			int start = matcher.start();
+			int end = matcher.end();
+			
+			while (end < text.length() && !Character.isWhitespace(text.charAt(end))) {
+				end++;
+			}
+			
+			if (position >= start && position < end) {
+				return text.substring(start, Math.min(end, text.length()));
+			}
+		}
+		
+		Matcher lineMatcher = pattern.matcher(currentLine);
+		if (lineMatcher.find()) {
+			return lineMatcher.group();
+		}
+		
 		return "NotAvailable";
 	}
 	
