@@ -16,11 +16,6 @@
             android:background="?attr/colorPrimary"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
     </com.google.android.material.appbar.AppBarLayout>
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
-        android:id="@+id/_coordinator"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
         <LinearLayout
             android:id="@+id/main"
             android:layout_width="match_parent"
@@ -42,18 +37,18 @@
                     android:gravity="left"
                     android:orientation="horizontal"
                     android:layout_weight="1">
-                 	<TextView
-							android:id="@+id/textview_left"
-							android:layout_width="wrap_content"
-							android:layout_height="wrap_content"
-							android:layout_marginLeft="15dp"
-							android:text="..."
-							android:textSize="10sp"
-							android:textColor="#B0B0B0"
-							android:layout_gravity="center_horizontal|center_vertical"
-							android:gravity="start|center_vertical"
-							android:ellipsize="end"
-							android:maxLines="1" />
+                    <TextView
+                        android:id="@+id/textview_left"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="15dp"
+                        android:text="..."
+                        android:textSize="10sp"
+                        android:textColor="#B0B0B0"
+                        android:layout_gravity="center_horizontal|center_vertical"
+                        android:gravity="start|center_vertical"
+                        android:ellipsize="end"
+                        android:maxLines="1" />
                 </LinearLayout>
                 <LinearLayout
                     android:id="@+id/linear_right"
@@ -91,18 +86,39 @@
                         android:layout_marginRight="15dp"
                         android:text="..."
                         android:textSize="10sp"
-                    	android:layout_gravity="center_horizontal|center_vertical"
+                        android:layout_gravity="center_horizontal|center_vertical"
                         android:textColor="#B0B0B0"
                         android:gravity="end|center_vertical"
                         android:ellipsize="end"
                         android:maxLines="1" />
                 </LinearLayout>
             </LinearLayout>
-            <io.github.rosemoe.sora.widget.CodeEditor
-                android:id="@+id/smali_editor"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="8dp" />
+                android:layout_height="0dp"
+                android:layout_weight="1">
+                <io.github.rosemoe.sora.widget.CodeEditor
+                    android:id="@+id/smali_editor"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="8dp"
+                    app:lnPanelPosition="center"
+                    app:lnPanelPositionMode="follow" />
+            </FrameLayout>
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:color/white"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+                <io.github.rosemoe.sora.widget.SymbolInputView
+                    android:id="@+id/symbol_input"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent" />
+            </HorizontalScrollView>
         </LinearLayout>
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+
+
+
