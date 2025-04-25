@@ -73,12 +73,12 @@ public class SmaliInstructionHelper {
 		}
 	}
 	
-    //checking full instruction namr
+	//checking full instruction namr
 	public static boolean isSmaliInstruction(String word) {
 		if (word == null) return false;
-        
+		
 		if (INSTRUCTIONS.contains(word)) return true;
-        
+		
 		for (String instruction : INSTRUCTIONS) {
 			if (word.startsWith(instruction) && 
 			(word.length() == instruction.length() || 
@@ -89,7 +89,10 @@ public class SmaliInstructionHelper {
 		}
 		return false;
 	}
-    
-    // TO-DO 
-    // loading instructions into arraylist for auto completion
+	
+	// TO-DO 
+	// loading instructions into arraylist for auto completion
+	public static String[] getAllSmaliInstructions() {
+		return INSTRUCTIONS.toArray(new String[0]);
+	}
 }

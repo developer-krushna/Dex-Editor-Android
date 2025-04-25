@@ -39,12 +39,16 @@ package modder.hub.dexeditor.utils;
 import android.text.TextUtils;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 
 public class SmaliCursorUtils {
 	/*
 	Author @developer-krushna
-	Code fixed/comments by ChatGPT
+	Code fixed/regex/comments by ChatGPT
 	*/
 	
 	public static String getCurrentMethodOrFieldName(CharSequence text, int cursorLine) {
@@ -100,6 +104,76 @@ public class SmaliCursorUtils {
 						i + 1, part.substring(0, part.indexOf(':')));
 					}
 				}
+			}
+		}
+		return null;
+	}
+	
+	
+	public static List<String> extractAllLabelLines(CharSequence text, int cursorLine) {
+		List<String> labelLines = new ArrayList<>();
+		String[] lines = text.toString().split("\n");
+		
+		MethodBoundary method = findMethodBoundary(lines, cursorLine);
+		if (method == null) return labelLines;
+		
+		// List of individual patterns for each label type
+		String[] patterns = {
+			// Conditional branches
+			"if-(?:eq|ne|lt|gt|le|ge|eqz|nez|ltz|gtz|lez|gez)\\b.*?:(\\w+)",
+			// Unconditional branches
+			"goto\\s+:([^\\s,]+)",
+			// Switch cases
+			"(?:packed|sparse)-switch\\b.*?:(\\w+)",
+			// Exception handlers
+			"(?:catch|catchall).*?\\{:(\\w+)\\s+\\.\\.\\s+:(\\w+)\\}.*?:(\\w+)",
+			// Try blocks
+			"\\.try_(?:start|end)_(\\w+)",
+			// Switch case entries (0x... -> :label)
+			"0x[0-9a-f]+\\s*->\\s*:(\\w+)",
+			// Plain labels
+			"^\\s*:(\\w+)"
+		};
+		
+		for (int lineNum = method.startLine; lineNum <= method.endLine; lineNum++) {
+			String line = lines[lineNum].trim();
+			if (line.isEmpty() || line.startsWith("#") || line.startsWith(".field")) {
+				continue;
+			}
+			
+			// Check against each pattern individually
+			for (String pattern : patterns) {
+				if (Pattern.matches(".*" + pattern + ".*", line)) {
+					labelLines.add(String.format("[%d] %s", lineNum + 1, line));
+					break; // Found a match, move to next line
+				}
+			}
+		}
+		return labelLines;
+	}
+	
+	private static class MethodBoundary {
+		int startLine;
+		int endLine;
+	}
+	
+	private static MethodBoundary findMethodBoundary(String[] lines, int cursorLine) {
+		MethodBoundary boundary = new MethodBoundary();
+		boundary.startLine = -1;
+		
+		for (int i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
+			if (lines[i].trim().startsWith(".method ")) {
+				boundary.startLine = i;
+				break;
+			}
+		}
+		
+		if (boundary.startLine == -1) return null;
+		
+		for (int i = boundary.startLine + 1; i < lines.length; i++) {
+			if (lines[i].trim().startsWith(".end method")) {
+				boundary.endLine = i;
+				return boundary;
 			}
 		}
 		return null;
