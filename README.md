@@ -20,7 +20,7 @@ A work-in-progress **DEX** editor for Android, using mainly [smali](https://gith
 - [x] Supported DEX version 40 and 41(Partially)
 - [x] Working on android api 21 (only my build apk)
 ## To-Do
-- [ ] Multi Dex Support
+- [x] Multi Dex Support
 - [ ] New Java decompilers
 - [ ] Multi smali class editor
 - [ ] Removing debug items
