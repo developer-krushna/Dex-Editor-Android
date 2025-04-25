@@ -1,37 +1,37 @@
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
- * Copyright 2024, developer-krushna
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of developer-krushna nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
- */
+* Dex-Editor-Android an Advanced Dex Editor for Android 
+* Copyright 2024-25, developer-krushna
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*
+*     * Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+*     * Redistributions in binary form must reproduce the above
+* copyright notice, this list of conditions and the following disclaimer
+* in the documentation and/or other materials provided with the
+* distribution.
+*     * Neither the name of developer-krushna nor the names of its
+* contributors may be used to endorse or promote products derived from
+* this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+* OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+*     Please contact Krushna by email mt.modder.hub@gmail.com if you need
+*     additional information or have any questions
+*/
 
 
 package modder.hub.dexeditor.activity;
@@ -79,7 +79,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.HashMap;
 import me.zhanghai.android.fastscroll.*;
 import modder.hub.dexeditor.views.*;
@@ -119,6 +119,7 @@ public class DexEditorActivity extends AppCompatActivity {
 	private int initialLongPressPosition = -1;
 	private int startPosition = Integer.MAX_VALUE;
 	private int itemCount = 0;
+	List<String> dexPaths;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -166,7 +167,9 @@ public class DexEditorActivity extends AppCompatActivity {
 	
 	// Initialize logic after permissions are granted
 	private void initializeLogic() {
-		dexPath = getIntent().getStringExtra("Path");
+		
+		
+		dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
 		setTitle("DexEditor");
 		showProcessingProgress(true);
 		new FastScrollerBuilder(recyclerView).build();
@@ -174,52 +177,95 @@ public class DexEditorActivity extends AppCompatActivity {
 		recyclerView.setLayoutAnimation(AnimationUtils.loadLayoutAnimation(this, R.anim.layout_animation_slide_from_bottom));
 		fabDelete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
 		fabDelete.hide();
-		new LoadDexThread().start();
+		if (dexPaths != null && !dexPaths.isEmpty()) {
+			new LoadDexThread(dexPaths).start();
+		} else {
+			// Handle error case
+			showErrorDialog("No DEX files provided");
+			finish();
+		}
 	}
 	
 	// Thread to load DEX file
 	private class LoadDexThread extends Thread {
+		
+		private final List<String> paths;
+		
+		public LoadDexThread(List<String> paths) {
+			this.paths = paths;
+		}
+		
 		@Override
 		public void run() {
 			try {
-				classTree = new ClassTree(dexPath);
+				// Initialize ClassTree with the provided paths
+				classTree = new ClassTree(paths);
+				
+				// Update UI on main thread
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						classList = classTree.getList("/");
-						getSupportActionBar().setSubtitle("/".concat(classTree.tree.getCurPath()));
-						for (int i = 0; i < classList.size(); i++) {
-							classMapItem = new HashMap<>();
-							classMapItem.put("ClassList", classList.get(i));
-							classMap.add(classMapItem);
+						try {
+							// Get root directory listing
+							classList = classTree.getList("/");
+							
+							// Update action bar subtitle
+							getSupportActionBar().setSubtitle("/".concat(classTree.tree.getCurPath()));
+							
+							// Populate classMap for RecyclerView
+							classMap.clear();
+							for (String cls : classList) {
+								HashMap<String, Object> item = new HashMap<>();
+								item.put("ClassList", cls);
+								classMap.add(item);
+							}
+							
+							// Refresh UI
 							refreshRecyclerView();
 							listData = new Gson().toJson(classMap);
+							
+						} catch (Exception e) {
+							handleUiThreadError(e);
 						}
 					}
 				});
-			} catch (Exception e) {
+				
+			} catch (final Exception e) {
 				showProcessingProgress(false);
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						AlertDialog.Builder builder = new AlertDialog.Builder(DexEditorActivity.this);
-						builder.setTitle("Error");
-						builder.setMessage("An error occurred while processing dex\n\n---StackTrace---\n\n" + e.getMessage());
-						builder.setPositiveButton("Go back", new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialogInterface, int i) {
-								finish();
-							}
-						});
-						builder.setCancelable(false);
-						Notify_MT.Dlg_Style(builder);
+						showErrorDialog(e);
 					}
 				});
+			} finally {
+				showProcessingProgress(false);
 			}
-			showProcessingProgress(false);
 		}
+		
+		private void handleUiThreadError(Exception e) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(DexEditorActivity.this);
+			builder.setTitle("Error");
+			builder.setMessage("UI update failed: " + e.getMessage());
+			builder.setPositiveButton("OK", null);
+			Notify_MT.Dlg_Style(builder);
+		}
+		
+		private void showErrorDialog(final Exception e) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(DexEditorActivity.this);
+			builder.setTitle("DEX Loading Error");
+			builder.setMessage("Failed to process DEX files:\n\n" + e.getMessage());
+			builder.setPositiveButton("Go Back", new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					finish();
+				}
+			});
+			builder.setCancelable(false);
+			Notify_MT.Dlg_Style(builder);
+		}
+		
 	}
-	
 	// Handle back button press
 	@Override
 	public void onBackPressed() {
@@ -559,7 +605,7 @@ public class DexEditorActivity extends AppCompatActivity {
 		@Override
 		public void onClick(DialogInterface dialogInterface, int i) {
 			final AlertProgress alertProgress = new AlertProgress(DexEditorActivity.this);
-			alertProgress.setTitle(String.valueOf(Uri.parse(dexPath).getLastPathSegment()) + " (1/1)");
+			alertProgress.setTitle("Processing...");
 			alertProgress.setMessage("Compiling...");
 			alertProgress.show();
 			
@@ -575,7 +621,7 @@ public class DexEditorActivity extends AppCompatActivity {
 				public void run() {
 					Looper.prepare();
 					try {
-						classTree.saveDexFile(dexPath, new ClassTree.DexSaveProgress() {
+						classTree.saveAllDexFiles(new ClassTree.DexSaveProgress() {
 							@Override
 							public void onProgress(final int progress, final int total) {
 								runOnUiThread(new Runnable() {
@@ -591,7 +637,7 @@ public class DexEditorActivity extends AppCompatActivity {
 								runOnUiThread(new Runnable() {
 									@Override
 									public void run() {
-										//	alertProgress.setTitle(title);
+										alertProgress.setTitle(title);
 									}
 								});
 							}

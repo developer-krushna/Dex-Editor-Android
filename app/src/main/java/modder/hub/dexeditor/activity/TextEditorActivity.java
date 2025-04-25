@@ -111,10 +111,27 @@ import modder.hub.dexeditor.R;
 import org.eclipse.tm4e.core.registry.IGrammarSourceMT;
 import org.eclipse.tm4e.core.registry.IThemeSourceMT;
 
+import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
+import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel;
+import org.eclipse.tm4e.core.registry.IThemeSourceMT;
+import androidx.appcompat.app.AppCompatActivity;
+import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver;
+import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
+import io.github.rosemoe.sora.widget.CodeEditor;
+import io.github.rosemoe.sora.widget.SymbolInputView;
+
+import io.github.rosemoe.sora.widget.CodeEditor;
+import io.github.rosemoe.sora.widget.component.EditorAutoCompletion;
+import io.github.rosemoe.sora.lang.completion.CompletionItem;
+import io.github.rosemoe.sora.lang.completion.CompletionPublisher;
+import io.github.rosemoe.sora.text.CharPosition;
+import modder.hub.dexeditor.adapter.*;
 
 /*
 Author @developer-krushna
 Code fixed comments by ChatGPT
+Thanks to @AndroidPrimwe
 */
 
 
@@ -140,6 +157,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private LinearLayout linearRight;
 	private TextView textviewLineNo;
 	private TextView methodName;
+	private SymbolInputView symbol_input;
 	
 	private TimerTask timerTask;
 	private MenuItem undoMenuItem;
@@ -168,6 +186,25 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	private String savedFont = "normal";
 	private boolean isReload = false;
 	
+	public SmaliInstructionHelper smaliInstructionHelper;
+	
+	public static final String[] SYMBOLS = new String[] {
+		"->", "{", "}", "(", ")",
+		",", ".", ";", "\"", "?",
+		"+", "-", "*", "/", "<",
+		">", "[", "]", ":"
+	};
+	
+	/**
+	* Texts to be committed to editor for symbols above
+	*/
+	public static final String[] SYMBOL_INSERT_TEXT = new String[] {
+		"\t", "{}", "}", "(", ")",
+		",", ".", ";", "\"", "?",
+		"+", "-", "*", "/", "<",
+		">", "[", "]", ":"
+	};
+	
 	
 	public interface FileSaveCallback {
 		void onFileSaved(String filePath);
@@ -192,6 +229,42 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		initializeLogic();
 	}
 	
+	private void showLabelsCompletion(String query) {
+		// 1. Fetch labels
+		int editorLineNumber = smaliEditor.getCursor().getLeftLine();
+		List<String> labelList = SmaliCursorUtils.extractAllLabelLines(
+		smaliEditor.getText().toString(),
+		editorLineNumber
+		);
+		
+		// 2. Show dialog
+		final ListDialog dialog = new ListDialog(
+		smaliEditor.getContext(),
+		labelList,
+		query,
+		editorLineNumber
+		);
+		
+		dialog.setOnLabelClickListener(new ListDialog.OnLabelClickListener() {
+			@Override
+			public void onLabelClick(String selectedLabel) {
+				String selectedItem = selectedLabel;
+				
+				int lineNumber = Integer.parseInt(selectedItem.substring(1, selectedItem.indexOf(']'))) - 1;
+				String lineContent = smaliEditor.getText().getLineString(lineNumber);
+				int columnPos = lineContent.indexOf(query);
+				
+				if (columnPos >= 0) {
+					smaliEditor.setSelection(lineNumber, columnPos);
+					smaliEditor.ensurePositionVisible(lineNumber, columnPos);
+				}
+				dialog.dismiss();
+			}
+		});
+		
+		dialog.show();
+	}
+	
 	private void initialize(Bundle savedInstanceState) {
 		DexEditorActivity.classTree = classTree;
 		appBarLayout = findViewById(R.id._app_bar);
@@ -204,6 +277,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		linearRight = findViewById(R.id.linear_right);
 		textviewLineNo = findViewById(R.id.textview_lineNo);
 		methodName = findViewById(R.id.methodName);
+		symbol_input = findViewById(R.id.symbol_input);
 		
 		
 		setSupportActionBar(toolbar);
@@ -259,10 +333,16 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		savedFont  = SettingsFragment.getFontType(this);
 		cursor = smaliEditor.getCursor();
 		
-		SmaliInstructionHelper.init(getApplicationContext());
-		
+		smaliInstructionHelper.init(getApplicationContext());
 		loadEditorSettings(true);
-		loadTheme();
+		symbol_input.bindEditor(smaliEditor);
+		symbol_input.addSymbols(SYMBOLS, SYMBOL_INSERT_TEXT);
+		loadTMThemes(this);
+		smaliEditor.setEditorLanguage(new CustomAutoComplete(smaliEditor, smaliInstructionHelper.getAllSmaliInstructions()));
+		try{
+			TextMateColorScheme scheme = TextMateColorScheme.create(ThemeRegistry.getInstance());
+			smaliEditor.setColorScheme(scheme);
+		}catch (Exception e){}
 		handleSmaliIntent();
 		
 		smaliEditor.subscribeEvent(ContentChangeEvent.class, new EventReceiver<ContentChangeEvent>() {
@@ -337,32 +417,12 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		}
 	}
 	
+	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		// Clear the fragment instance on activity destruction
 		smaliMethodsStringsFragment = null;
-	}
-	
-	
-	@Override
-	public void onStart() {
-		super.onStart();
-		if (saveOnStart.equals("")) {
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					SystemClock.sleep(200);
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							loadTheme();
-						}
-					});
-				}
-			}).start();
-			saveOnStart = "Saved";
-		}
 	}
 	
 	@Override
@@ -534,13 +594,12 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 	}
 	
 	
+	
 	public void loadEditorSettings(boolean loadTypeface){
 		smaliEditor.setTextSize(SettingsFragment.getFontSize(this));
 		smaliEditor.setLineNumberEnabled(SettingsFragment.showLineNumbers(this));
-		
 		smaliEditor.setLineSpacing(2.0f, 1.1f);
 		smaliEditor.setLineNumberMarginLeft(2f);
-		
 		smaliEditor.setWordwrap(editorPrefs.getBoolean("wrap_text", false));
 		if(loadTypeface){
 			Typeface typeface = savedFont.equals("normal") 
@@ -573,7 +632,11 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		
 		@Override
 		public void onClickGoTo(View view, final String text) {
-			runOnUiThread(new GoToRunnable(text, currentClassName));
+			if(text.startsWith(":")){
+				showLabelsCompletion(text.replace("}", ""));
+			} else {
+				runOnUiThread(new GoToRunnable(text, currentClassName));
+			}
 		}
 		
 		@Override
@@ -617,6 +680,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 			
 		}
 	}
+	
 	
 	private class GoToRunnable implements Runnable {
 		private final String text;
@@ -770,7 +834,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 						if (classTree == null) {
 							finish();
 						}
-						String smaliCode = new String(getSmaliByType(classTree.classMap.get(intentClassName)).getBytes(), "UTF-8");
+						String smaliCode = new String(classTree.getSmaliByType(classTree.classMap.get(intentClassName)).getBytes(), "UTF-8");
 						
 						// Update UI on the main thread
 						runOnUiThread(new Runnable() {
@@ -1843,5 +1907,25 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 		SketchwareUtil.showMessage(this, "Text has been copied to clipboard");
 	}
 	
-	
+	public static void loadTMThemes(Context context) {
+		FileProviderRegistry.getInstance()
+		.addFileProvider(new AssetsFileResolver(context.getAssets()));
+		ThemeRegistry scheme = ThemeRegistry.getInstance();
+		String light = "light.json";  // Only this theme will be loaded
+		
+		String path = "themes/" + light;
+		try {
+			scheme.loadTheme(
+			new ThemeModel(
+			IThemeSourceMT.fromInputStream(
+			FileProviderRegistry.getInstance().tryGetInputStream(path),
+			path,
+			null),
+			light));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		scheme.setTheme(light);  // Set the quietlight theme as active
+	}
 }
