@@ -45,7 +45,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.io.comparator.NaturalOrderComparator;
+import java.util.*;
 /*
 Author @developer-krushna
 */
@@ -84,7 +84,7 @@ public class DexFileSelector {
 					return file.getName().endsWith(".dex");
 				}
 			});
-            
+			
 			if (files != null && files.length > 0) {
 				for (File file : files) {
 					dexFiles.add(file.getAbsolutePath());
@@ -180,5 +180,48 @@ public class DexFileSelector {
 		});
 		
 		dialog.show();
+	}
+	
+	public class NaturalOrderComparator implements Comparator<String> {
+		@Override
+		public int compare(String a, String b) {
+			int aLength = a.length();
+			int bLength = b.length();
+			int aIndex = 0;
+			int bIndex = 0;
+			
+			while (aIndex < aLength && bIndex < bLength) {
+				char aChar = a.charAt(aIndex);
+				char bChar = b.charAt(bIndex);
+				
+				if (Character.isDigit(aChar) && Character.isDigit(bChar)) {
+					// Compare numbers
+					int aNumber = 0;
+					while (aIndex < aLength && Character.isDigit(a.charAt(aIndex))) {
+						aNumber = aNumber * 10 + (a.charAt(aIndex) - '0');
+						aIndex++;
+					}
+					
+					int bNumber = 0;
+					while (bIndex < bLength && Character.isDigit(b.charAt(bIndex))) {
+						bNumber = bNumber * 10 + (b.charAt(bIndex) - '0');
+						bIndex++;
+					}
+					
+					if (aNumber != bNumber) {
+						return Integer.compare(aNumber, bNumber);
+					}
+				} else {
+					// Compare characters
+					if (aChar != bChar) {
+						return Character.compare(aChar, bChar);
+					}
+					aIndex++;
+					bIndex++;
+				}
+			}
+			
+			return aLength - bLength;
+		}
 	}
 }
