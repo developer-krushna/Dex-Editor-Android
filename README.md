@@ -29,7 +29,7 @@ A work-in-progress multifunctional advanced *Android **DEX** file editor* for An
 ## Project build by 
 - [Sketchware Pro](https://github.com/Sketchware-Pro/Sketchware-Pro) , Java 11 version
   ### Download sample app
-  [Dex Editor +](https://github.com/developer-krushna/Dex-Editor-Android/releases/tag/v1.3-final)
+  [Dex Editor +](https://github.com/developer-krushna/Dex-Editor-Android/releases/tag/v1.3_final)
 ## Watch a quick video
 https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186-e789-44f6-bdc3-180fc3e3e0c9
 ## Special thanks to
