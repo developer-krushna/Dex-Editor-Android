@@ -12,7 +12,7 @@ android {
 		minSdkVersion 24
 		targetSdkVersion 28
 		versionCode 1
-		versionName "1.0"
+		versionName "1.0 final"
 	}
 	
 	buildTypes {
@@ -28,15 +28,14 @@ dependencies {
 	implementation 'androidx.appcompat:appcompat:1.2.0'
 	implementation 'com.google.android.material:material:1.4.0'
 	implementation 'com.google.code.gson:gson:2.8.7'
-    implementation 'io.github.Rosemoe.sora-editor:editor:0.23.4'
-    implementation 'io.github.Rosemoe.sora-editor:language-textmate:0.23.4'
-    implementation 'io.github.Rosemoe.sora-editor:language-java:0.23.4'
-    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
-    implementation 'io.github.skylot:jadx-core:1.4.7'
-    implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
-    implementation "androidx.preference:preference:1.2.1"
-    implementation 'io.noties.markwon:core:4.6.2'
-    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
-    compile 'com.github.angads25:filepicker:1.1.1'
-
+        implementation 'io.github.Rosemoe.sora-editor:editor:0.23.4'
+        implementation 'io.github.Rosemoe.sora-editor:language-textmate:0.23.4'
+        implementation 'io.github.Rosemoe.sora-editor:language-java:0.23.4'
+        implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+        implementation 'io.github.skylot:jadx-core:1.4.7'
+        implementation 'io.github.skylot:jadx-plugins-api:1.4.7'
+        implementation "androidx.preference:preference:1.2.1"
+        implementation 'io.noties.markwon:core:4.6.2'
+        implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+        compile 'com.github.angads25:filepicker:1.1.1'
 }
