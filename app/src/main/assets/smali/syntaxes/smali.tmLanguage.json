@@ -77,37 +77,17 @@
       "match": "\\b(nonlocal)\\b"
     },
     {
-      "comment": "匹配类名",
-      "match": "([\\[]{0,4}L((?![\\(:\\),\"]).)*?;)",
-      "name": "meta.return.type"
-    },
-    {
-      "comment": "匹配基本类型数组",
-      "match": "([\\[]{1,4}[V|Z|B|S|C|I|J|F|D])",
-      "name": "meta.return.type"
-    },
-    {
-      "comment": "匹配变量v0,p0",
-      "match": "([vp][0-9][0-9]{0,3})",
-      "name": "constant.numeric"
-    },
-    {
-      "comment": "匹配变量:goto",
-      "match": "(:[a-z0-9\\-_]{0,30})",
-      "name": "token.debug-token"
-    },
-    {
       "comment": "keywords that smali",
       "name": "keyword.control.statement",
-      "match": "\\b(invoke-virtual-quick/range|invoke-object-init/range|invoke-super-quick/range|invoke-polymorphic/range|filled-new-array/range|invoke-interface/range|execute-inline/range|invoke-virtual/range|invoke-direct/range|invoke-static/range|invoke-super/range|const-string/jumbo|move-object/from16|move-object/16|const-wide/16|const-wide/32|const-wide/high16|add-double/2addr|sub-double/2addr|mul-double/2addr|div-double/2addr|rem-double/2addr|move-wide/from16|move-wide/16|ushr-long/2addr|add-float/2addr|sub-float/2addr|mul-float/2addr|div-float/2addr|rem-float/2addr|ushr-int/2addr|rsub-int/lit8|ushr-int/lit8|add-long/2addr|sub-long/2addr|mul-long/2addr|div-long/2addr|rem-long/2addr|and-long/2addr|xor-long/2addr|shl-long/2addr|shr-long/2addr|add-int/2addr|sub-int/2addr|mul-int/2addr|div-int/2addr|rem-int/2addr|and-int/2addr|xor-int/2addr|shl-int/2addr|shr-int/2addr|add-int/lit16|mul-int/lit16|div-int/lit16|rem-int/lit16|and-int/lit16|xor-int/lit16|add-int/lit8|mul-int/lit8|div-int/lit8|rem-int/lit8|and-int/lit8|xor-int/lit8|shl-int/lit8|shr-int/lit8|or-long/2addr|or-int/2addr|or-int/lit16|or-int/lit8|const/4|const/16|const/high16|move/from16|move/16|instance-of|monitor-enter|monitor-exit|execute-inline|filled-new-array|invoke-virtual|invoke-super|invoke-direct|invoke-static|invoke-interface|double-to-int|double-to-long|double-to-float|invoke-direct-empty|return-void-barrier|return-void-no-barrier|invoke-virtual-quick|invoke-super-quick|packed-switch-payload|sparse-switch-payload|invoke-polymorphic|const-wide|const-string|const-class|check-cast|array-length|float-to-int|float-to-long|float-to-double|throw-verification-error|array-payload|move-result-wide|move-result-object|move-wide|move-object|move-result|move-exception|fill-array-data|cmpl-float|cmpg-float|cmpl-double|cmpg-double|aget-wide|aget-object|aget-boolean|aget-byte|aget-char|aget-short|aput-wide|aput-object|aput-boolean|aput-byte|aput-char|aput-short|iget-wide|iget-object|iget-boolean|iget-byte|iget-char|iget-short|iput-wide|iput-object|iput-boolean|iput-byte|iput-char|iput-short|sget-wide|sget-object|sget-boolean|sget-byte|sget-char|sget-short|sput-wide|sput-object|sput-boolean|sput-byte|sput-char|sput-short|long-to-int|long-to-float|long-to-double|ushr-int|ushr-long|rsub-int|iget-volatile|iput-volatile|sget-volatile|sput-volatile|iget-object-volatile|iget-wide-volatile|iput-wide-volatile|sget-wide-volatile|sput-wide-volatile|iget-quick|iget-wide-quick|iget-object-quick|iput-quick|iput-wide-quick|iput-object-quick|iput-boolean-quick|iput-byte-quick|iput-char-quick|iput-short-quick|iget-boolean-quick|iget-byte-quick|iget-char-quick|iget-short-quick|iput-object-volatile|sget-object-volatile|sput-object-volatile|new-instance|new-array|cmp-long|neg-int|not-int|neg-long|not-long|neg-float|neg-double|int-to-long|int-to-float|int-to-double|int-to-byte|int-to-char|int-to-short|add-int|sub-int|mul-int|div-int|rem-int|and-int|xor-int|shl-int|shr-int|add-long|sub-long|mul-long|div-long|rem-long|and-long|xor-long|shl-long|shr-long|add-float|sub-float|mul-float|div-float|rem-float|add-double|sub-double|mul-double|div-double|rem-double|or-int|or-long|public|protected|private|class|interface|abstract|extends|implements|super|this|instanceof|byte|short|int|long|float|double|char|enum|null|true|false|synchronized|volatile|throw|throws|try|catch|finally|else|case|break|default|continue|while|do|for|package|import|transient|assert|native|final|static|strictfp|constructor|nop|move|const|aget|aput|iget|iput|sget|sput|unchecked|build|runtime|system|value|name|names|accessFlags|public|private|protected|static|final|synchronized|volatile|bridge|transient|varargs|native|interface|abstract|strictfp|synthetic|annotation|enum|constructor|declared-synchronized|whitelist|greylist|blacklist|greylist-max-o|greylist-max-p|greylist-max-q|greylist-max-r|core-platform-api|test-api|static-get@|static-put@|instance-get@|instance-put@|invoke-instance@|invoke-static@|invoke-direct@|invoke-interface@|invoke-constructor@|invoke-polymorphic|invoke-polymorphic/range|invoke-custom|invoke-custom/range|const-method-handle|const-method-type)\\b"
+      "match": "\\b(invoke-virtual-quick/range|invoke-object-init/range|invoke-super-quick/range|invoke-polymorphic/range|filled-new-array/range|invoke-interface/range|execute-inline/range|invoke-virtual/range|invoke-direct/range|invoke-static/range|invoke-super/range|const-string/jumbo|move-object/from16|move-object/16|const-wide/16|const-wide/32|const-wide/high16|add-double/2addr|sub-double/2addr|mul-double/2addr|div-double/2addr|rem-double/2addr|move-wide/from16|move-wide/16|ushr-long/2addr|add-float/2addr|sub-float/2addr|mul-float/2addr|div-float/2addr|rem-float/2addr|ushr-int/2addr|rsub-int/lit8|ushr-int/lit8|add-long/2addr|sub-long/2addr|mul-long/2addr|div-long/2addr|rem-long/2addr|and-long/2addr|xor-long/2addr|shl-long/2addr|shr-long/2addr|add-int/2addr|sub-int/2addr|mul-int/2addr|div-int/2addr|rem-int/2addr|and-int/2addr|xor-int/2addr|shl-int/2addr|shr-int/2addr|add-int/lit16|mul-int/lit16|div-int/lit16|rem-int/lit16|and-int/lit16|xor-int/lit16|add-int/lit8|mul-int/lit8|div-int/lit8|rem-int/lit8|and-int/lit8|xor-int/lit8|shl-int/lit8|shr-int/lit8|or-long/2addr|or-int/2addr|or-int/lit16|or-int/lit8|const/4|const/16|const/high16|move/from16|move/16|instance-of|monitor-enter|monitor-exit|execute-inline|filled-new-array|packed-switch|sparse-switch|invoke-virtual|invoke-super|invoke-direct|invoke-static|invoke-interface|double-to-int|double-to-long|double-to-float|invoke-direct-empty|return-void-barrier|return-void-no-barrier|invoke-virtual-quick|invoke-super-quick|packed-switch-payload|sparse-switch-payload|invoke-polymorphic|const-wide|const-string|const-class|check-cast|array-length|float-to-int|float-to-long|float-to-double|throw-verification-error|array-payload|move-result-wide|move-result-object|move-wide|move-object|move-result|move-exception|fill-array-data|cmpl-float|cmpg-float|cmpl-double|cmpg-double|aget-wide|aget-object|aget-boolean|aget-byte|aget-char|aget-short|aput-wide|aput-object|aput-boolean|aput-byte|aput-char|aput-short|iget-wide|iget-object|iget-boolean|iget-byte|iget-char|iget-short|iput-wide|iput-object|iput-boolean|iput-byte|iput-char|iput-short|sget-wide|sget-object|sget-boolean|sget-byte|sget-char|sget-short|sput-wide|sput-object|sput-boolean|sput-byte|sput-char|sput-short|long-to-int|long-to-float|long-to-double|ushr-int|ushr-long|rsub-int|iget-volatile|iput-volatile|sget-volatile|sput-volatile|iget-object-volatile|iget-wide-volatile|iput-wide-volatile|sget-wide-volatile|sput-wide-volatile|iget-quick|iget-wide-quick|iget-object-quick|iput-quick|iput-wide-quick|iput-object-quick|iput-boolean-quick|iput-byte-quick|iput-char-quick|iput-short-quick|iget-boolean-quick|iget-byte-quick|iget-char-quick|iget-short-quick|iput-object-volatile|sget-object-volatile|sput-object-volatile|new-instance|new-array|cmp-long|neg-int|not-int|neg-long|not-long|neg-float|neg-double|int-to-long|int-to-float|int-to-double|int-to-byte|int-to-char|int-to-short|add-int|sub-int|mul-int|div-int|rem-int|and-int|xor-int|shl-int|shr-int|add-long|sub-long|mul-long|div-long|rem-long|and-long|xor-long|shl-long|shr-long|add-float|sub-float|mul-float|div-float|rem-float|add-double|sub-double|mul-double|div-double|rem-double|or-int|or-long|public|protected|private|class|interface|abstract|extends|implements|super|this|instanceof|byte|short|int|long|float|double|char|enum|null|true|false|synchronized|volatile|throw|throws|try|catch|finally|else|switch|case|break|default|continue|while|do|for|package|import|transient|assert|native|final|static|strictfp|constructor|nop|move|const|aget|aput|iget|iput|sget|sput|unchecked|invoke-polymorphic|invoke-polymorphic/range|invoke-custom|invoke-custom/range)\\b"
     },
     {
       "comment": "keywords that smali flow",
       "name": "keyword.css",
-      "match": "\\b(switch|sparse-switch|packed-switch|goto/16|goto/32|array-data|if-eq|if-ne|if-lt|if-ge|if-gt|if-le|if-eqz|if-nez|if-ltz|if-gez|if-gtz|if-lez|return-void|return-wide|return-object|goto|field|local|void|return|throw)\\b"
+      "match": "\\b(sparse-switch|packed-switch|goto/16|goto/32|array-data|if-eq|if-ne|if-lt|if-ge|if-gt|if-le|if-eqz|if-nez|if-ltz|if-gez|if-gtz|if-lez|return-void|return-wide|return-object|goto|field|local|void|return|throw)\\b"
     },
     {
-      "match": "(\\.end\\s[a-z]{1,12})",
+      "match": "(\\.end\\s[a-z\\-]{1,12})",
       "name": "keyword.css"
     },
     {
@@ -134,7 +114,26 @@
       "match": "\\=",
       "name": "keyword.operator.assignment"
     },
-   
+    {
+      "comment": "匹配类名",
+      "match": "([\\[]{0,4}L((?![\\(:\\),\"]).)+?;)",
+      "name": "meta.return.type"
+    },
+    {
+      "comment": "匹配基本类型数组",
+      "match": "([\\[]{1,4}[V|Z|B|S|C|I|J|F|D])",
+      "name": "meta.return.type"
+    },
+    {
+      "comment": "匹配变量v0,p0",
+      "match": "([vp][0-9][0-9]{0,3})",
+      "name": "constant.numeric"
+    },
+    {
+      "comment": "匹配变量:goto",
+      "match": "(:[a-z0-9\\-_]{0,30})",
+      "name": "token.debug-token"
+    },
     {
       "begin": "(\\()",
       "end": "(\\))",
