@@ -1,6 +1,6 @@
 ## My first open source Project 😀🇮🇳
 # Dex-Editor-Android
-A work-in-progress **DEX** editor for Android, using mainly [smali](https://github.com/google/smali) & [dexlib2](https://github.com/google/smali/tree/main/dexlib2).
+A work-in-progress multifunctional advanced **DEX** editor for Android, using mainly [smali](https://github.com/google/smali) & [dexlib2](https://github.com/google/smali/tree/main/dexlib2).
 ## Available decompilers
 - [JADX](https://github.com/skylot/jadx)
 
