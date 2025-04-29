@@ -41,6 +41,7 @@ import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali.smaliFlexLexer;
 import com.android.tools.smali.smali.*;
 import com.android.tools.smali.dexlib2.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -58,8 +59,8 @@ Re-modification done by @developer-krushna
 */
 public class Smali {
 
-    public static ClassDef assemble(String smaliCode, SmaliOptions options) throws Exception {
-        DexBuilder dexBuilder = new DexBuilder(Opcodes.forApi(options.apiLevel));
+    public static ClassDef assemble(String smaliCode, SmaliOptions options, int dexVer) throws Exception {
+        DexBuilder dexBuilder = new DexBuilder(Opcodes.forDexVersion(dexVer));
 
         SmaliCatchErrFlexLexer lexer = new SmaliCatchErrFlexLexer(new StringReader(smaliCode), options.apiLevel);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -67,7 +68,7 @@ public class Smali {
         SmaliCatchErrParser parser = new SmaliCatchErrParser(tokens);
         parser.setVerboseErrors(options.verboseErrors);
         parser.setAllowOdex(options.allowOdexOpcodes);
-        parser.setApiLevel(options.apiLevel);
+        parser.setApiLevel(dexVer);
 
         SmaliCatchErrParser.smali_file_return result = parser.smali_file();
 
@@ -85,7 +86,7 @@ public class Smali {
         treeStream.setTokenStream(tokens);
 
         SmaliCatchErrTreeWalker treeWalker = new SmaliCatchErrTreeWalker(treeStream);
-        treeWalker.setApiLevel(options.apiLevel);
+        treeWalker.setApiLevel(dexVer);
         treeWalker.setVerboseErrors(options.verboseErrors);
         treeWalker.setDexBuilder(dexBuilder);
 
