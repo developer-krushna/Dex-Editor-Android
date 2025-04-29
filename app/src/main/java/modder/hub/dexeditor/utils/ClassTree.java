@@ -45,6 +45,7 @@ import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.dexlib2.writer.builder.DexBuilder;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
 import com.android.tools.smali.dexlib2.util.DexUtil;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
@@ -158,8 +159,10 @@ public class ClassTree {
 	
 	private void loadDeletedClasses() {
 		try {
-			File f = new File(DELETED_CLASSES_JSON);
-			if (!f.exists()) return;
+			File file = new File(DELETED_CLASSES_JSON);
+			if (file.exists()) {
+				file.delete();
+			}
 			
 			String json = new String(read(DELETED_CLASSES_JSON));
 			deletedClassJson = new Gson().fromJson(json, new TypeToken<Map<String, List<String>>>() {}.getType());
@@ -347,7 +350,7 @@ public class ClassTree {
 			
 			dexSaveProgress.onMessage("Writing file...");
 			try {
-				MemoryDataStore memoryDataStore = new MemoryDataStore();
+				MemoryDataStore memoryDataStore = new MemoryDataStore(4096);
 				dexBuilder.writeTo(memoryDataStore);
 				byte[] result = Arrays.copyOf(memoryDataStore.getBuffer(), memoryDataStore.getSize());
 				
