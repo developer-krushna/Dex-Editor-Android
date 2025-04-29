@@ -68,7 +68,7 @@ public class Smali2Java {
 			DexBuilder dexBuilder = new DexBuilder(Opcodes.forDexVersion(version));
 			dexBuilder.setIgnoreMethodAndFieldError(true);
 			
-			ClassDef classDef = Smali.assemble(smali, new SmaliOptions());
+			ClassDef classDef = Smali.assemble(smali, new SmaliOptions(), version);
 			
 			DexPool pool = new DexPool(Opcodes.getDefault());
 			pool.internClass(classDef);
