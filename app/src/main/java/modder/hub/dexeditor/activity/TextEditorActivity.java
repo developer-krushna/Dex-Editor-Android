@@ -71,7 +71,7 @@ import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.smali.SmaliOptions;
-import com.android.tools.smali.smali2.Smali2;
+import com.android.tools.smali.smali2.Smali;
 
 import com.blogspot.atifsoftwares.animatoolib.Animatoo;
 
@@ -1232,7 +1232,7 @@ public class TextEditorActivity extends AppCompatActivity implements SmaliMethod
 						public void run() {
 							Looper.prepare();
 							try {
-								classTree.saveClassDef(Smali2.assemble(smaliEditor.getText().toString(), new SmaliOptions(), dexVersion));
+								classTree.saveClassDef(Smali.assemble(smaliEditor.getText().toString(), new SmaliOptions(), dexVersion));
 								showProgressDialog(false);
 								isEditMode = false;
 								SketchwareUtil.showMessage(getApplicationContext(), "Saved successfully");
