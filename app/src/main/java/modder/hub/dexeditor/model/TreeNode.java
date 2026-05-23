@@ -1,6 +1,6 @@
 /*
  * Dex-Editor-Android an Advanced Dex Editor for Android
- * Copyright 2024-25, developer-krushna
+ * Copyright 2024-26, developer-krushna
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,7 +36,10 @@ package modder.hub.dexeditor.model;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/*
+ * Author - @developer-krushna
+ * this class responsible for getter and setters helper methods for tree view in recyclerview
+ */
 public class TreeNode {
     private String name;
     private String fullName;
