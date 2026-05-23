@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "name": "Smali",
+      "scope": "source.smali",
+      "grammar": "smali/syntaxes/smali.tmLanguage.json",
+      "config": "smali/language-configuration.json"
+    }
+  ]
+}
