@@ -36,6 +36,10 @@
 
 package modder.hub.dexeditor.smali;
 
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
 import java.util.*;
 import java.util.regex.*;
 
@@ -58,7 +62,8 @@ public class SmaliMethodInvokeParser {
 		this.className = className;
 	}
 	
-	public String generateInvokeCode(String methodSignature, String resultRegister) {
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    public String generateInvokeCode(String methodSignature, String resultRegister) {
 		MethodInfo methodInfo = parseMethodSignature(methodSignature);
 		return buildInvokeInstruction(methodInfo, resultRegister);
 	}
@@ -143,7 +148,8 @@ public class SmaliMethodInvokeParser {
 		}
 	}
 	
-	private MethodInfo parseMethodSignature(String signature) {
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    private MethodInfo parseMethodSignature(String signature) {
 		MethodInfo info = new MethodInfo();
 		
 		// Improved regex to better capture all modifiers

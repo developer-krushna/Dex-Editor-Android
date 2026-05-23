@@ -55,7 +55,7 @@ import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.smali2.Smali;
 import com.android.tools.smali.smali.SmaliOptions;
 
-import modder.hub.dexeditor.FileUtil;
+import modder.hub.dexeditor.utils.FileUtil;
 /*
 Author @developer-krushna
 */
@@ -79,6 +79,9 @@ public class Smali2Java {
 			args.setInputFiles(ImmutableList.of(tmp));
 			JadxDecompiler decompiler = new JadxDecompiler(args);
 			decompiler.load();
+			if (decompiler.getClasses().isEmpty()) {
+				return "// No classes found in decompiled DEX";
+			}
 			JavaClass jcls = decompiler.getClasses().iterator().next();
 			jcls.decompile();
 			return jcls.getCode();
