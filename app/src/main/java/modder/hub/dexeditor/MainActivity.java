@@ -207,6 +207,9 @@ public class MainActivity extends AppCompatActivity implements FilePermissionMan
         openDexFileButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                 if (dexFilePathEditText.getText().toString().isEmpty()){
+                    return;
+                }
                 String initialPath = dexFilePathEditText.getText().toString();
                 DexFileSelector dexSelector = new DexFileSelector(MainActivity.this, initialPath);
                 dexSelector.setOnFilesSelectedListener(new DexFileSelector.OnFilesSelectedListener() {
