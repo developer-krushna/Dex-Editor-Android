@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="close_btn">Close</string>
-    <string name="error_title">Error</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Dex Editor</string>
     <string name="select_all">Select All</string>
-    <string name="copy">Copy</string>
+    <string name="copy" tools:ignore="PrivateResource">Copy</string>
     <string name="paste">Paste</string>
     <string name="go_to">Go To</string>
     <string name="translate">Translate</string>
@@ -14,4 +13,22 @@
     <string name="share">Share text</string>
     <string name="customize">Customize</string>
     <string name="delete">Delete</string>
+    <string name="exit">Exit</string>
+    <string name="compile">Compile</string>
+    <string name="preferences">Preferences</string>
+    <string name="compilation_options">Compilation options</string>
+    <string name="dex_version">Dex version</string>
+    <string name="remove_all_debug_info">Remove all debug info</string>
+    <string name="remove_debug_info_source">Remove debug info .source</string>
+    <string name="remove_debug_info_line">Remove debug info .line</string>
+    <string name="remove_debug_info_param">Remove debug info .param</string>
+    <string name="remove_debug_info_prologue">Remove debug info .prologue</string>
+    <string name="remove_debug_info_local">Remove debug info .xxx local</string>
+    <string name="full_storage_access_required">Full Storage Access Required</string>
+    <string name="manage_all_files_msg">On Android 11+, this app needs special permission to manage all files.</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="press_again_msg">Press back again to cancel</string>
+    <string name="error">Error</string>
+    <string name="close">Close</string>
 </resources>

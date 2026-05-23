@@ -19,4 +19,15 @@
 		<item name="windowActionBar">true</item>
 		<item name="windowNoTitle">false</item>
 	</style>
+	<style name="text_action_popup_animation">
+		<item name="android:windowEnterAnimation">@anim/anim_text_action_popup_enter</item>
+		<item name="android:windowExitAnimation">@anim/anim_text_action_popup_exit</item>
+	</style>
+	<style name="TabTextAppearance" parent="TextAppearance.Design.Tab">
+		<item name="android:textStyle">normal</item>
+	</style>
+	<style name="ToolbarSmallSubtitle" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+		<item name="android:textSize">10sp</item>
+		<item name="textSize">10sp</item>
+	</style>
 </resources>
