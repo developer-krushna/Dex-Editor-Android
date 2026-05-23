@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_compile"
+        android:icon="@drawable/ic_hammer"
+        android:title="@string/compile"
+        app:showAsAction="ifRoom" />
+    <item
+        app:showAsAction="always"
+        android:icon="@drawable/ic_more_mt"
+        android:id="@+id/more_menu"
+        android:title="More">
+        <menu>
+            <item
+                android:id="@+id/action_preferences"
+                android:title="@string/preferences"
+                android:icon="@drawable/ic_setting_mt" />
+            <item
+                android:id="@+id/action_exit"
+                android:icon="@drawable/ic_exit"
+                android:title="@string/exit" />
+        </menu>
+    </item>
+
+</menu>

@@ -77,6 +77,7 @@
     <item
         app:showAsAction="always"
         android:icon="@drawable/ic_more_mt"
+        android:id="@+id/more_menu"
         android:title="More">
         <menu>
             <item
