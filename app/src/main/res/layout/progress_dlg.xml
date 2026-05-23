@@ -17,13 +17,12 @@
 		android:paddingTop="8dp"
 		android:paddingRight="8dp"
 		android:paddingBottom="4dp"
-		android:text="Title"
 		android:textSize="20sp"
 		android:textStyle="bold"
-		android:textColor="#000000"
+		android:textColor="?attr/colorOnSurface"
 		android:singleLine="true"
 		android:ellipsize="start"
-		android:textAppearance="?android:attr/dialogTitle" />
+		android:visibility="gone" />
 	<TextView
 		android:id="@+id/message"
 		android:focusable="false"
@@ -36,14 +35,13 @@
 		android:paddingTop="8dp"
 		android:paddingRight="8dp"
 		android:paddingBottom="4dp"
-		android:text="Processing..."
 		android:textSize="16sp"
-		android:textColor="#000000"
+		android:textColor="?attr/colorOnSurface"
 		android:singleLine="true"
-		android:ellipsize="start" />
-	<ProgressBar
+		android:ellipsize="start"
+		android:visibility="gone" />
+	<com.google.android.material.progressindicator.LinearProgressIndicator
 		android:id="@+id/progress"
-		android:focusable="false"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_marginLeft="15dp"
@@ -51,5 +49,6 @@
 		android:layout_marginBottom="10dp"
 		android:padding="8dp"
 		android:indeterminate="false"
-		style="?android:progressBarStyleHorizontal" />
+		app:trackThickness="4dp"
+		app:trackCornerRadius="4dp" />
 </LinearLayout>
