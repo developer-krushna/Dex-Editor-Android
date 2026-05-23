@@ -38,60 +38,23 @@
 package modder.hub.dexeditor.activity;
 
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
-import modder.hub.dexeditor.fragment.*;
-import android.animation.*;
-import android.app.*;
-import android.content.*;
-import android.content.res.*;
-import android.graphics.*;
-import android.graphics.drawable.*;
-import android.media.*;
-import android.net.*;
-import android.os.*;
-import android.text.*;
-import android.text.style.*;
-import android.util.*;
-import android.view.*;
-import android.view.View.*;
-import android.view.animation.*;
-import android.webkit.*;
-import android.widget.*;
-import android.widget.LinearLayout;
-import androidx.annotation.*;
+import android.view.View;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import com.blogspot.atifsoftwares.animatoolib.*;
-import com.github.angads25.filepicker.*;
-import com.github.chrisbanes.photoview.*;
-import com.google.android.material.appbar.AppBarLayout;
-import io.github.rosemoe.sora.*;
-import io.github.rosemoe.sora.langs.java.*;
-import java.io.*;
-import java.text.*;
-import java.util.*;
-import java.util.regex.*;
-import me.zhanghai.android.fastscroll.*;
-import org.json.*;
+
+import java.util.Objects;
+
 import modder.hub.dexeditor.R;
+import modder.hub.dexeditor.fragment.SettingsFragment;
 
 /*
 Author @developer-krushna
 */
 
 public class SettingsActivity extends AppCompatActivity {
-	
-	private Toolbar _toolbar;
-	private AppBarLayout _app_bar;
-	private CoordinatorLayout _coordinator;
-	
-	private LinearLayout linear1;
-	
-	@Override
+
+    @Override
 	protected void onCreate(Bundle _savedInstanceState) {
 		super.onCreate(_savedInstanceState);
 		setContentView(R.layout.settings);
@@ -100,11 +63,9 @@ public class SettingsActivity extends AppCompatActivity {
 	}
 	
 	private void initialize(Bundle _savedInstanceState) {
-		_app_bar = findViewById(R.id._app_bar);
-		_coordinator = findViewById(R.id._coordinator);
-		_toolbar = findViewById(R.id._toolbar);
+        Toolbar _toolbar = findViewById(R.id._toolbar);
 		setSupportActionBar(_toolbar);
-		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
 		getSupportActionBar().setHomeButtonEnabled(true);
 		_toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 			@Override
@@ -112,7 +73,6 @@ public class SettingsActivity extends AppCompatActivity {
 				onBackPressed();
 			}
 		});
-		linear1 = findViewById(R.id.linear1);
 	}
 	
 	private void initializeLogic() {
