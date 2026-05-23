@@ -1,6 +1,6 @@
 /*
 * Dex-Editor-Android an Advanced Dex Editor for Android 
-* Copyright 2024-25, developer-krushna
+* Copyright 2024-26, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,34 +35,30 @@
 
 package modder.hub.dexeditor.utils;
 
-import android.graphics.Color;
 import android.os.Bundle;
-import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import io.github.rosemoe.sora.lang.completion.CompletionItem;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion;
-import java.util.ArrayList;
 import org.eclipse.tm4e.languageconfiguration.internal.model.IndentationRules;
-import java.lang.ref.WeakReference;
 
 import io.github.rosemoe.sora.lang.EmptyLanguage;
+import io.github.rosemoe.sora.lang.Language;
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager;
 import io.github.rosemoe.sora.lang.completion.CompletionPublisher;
-import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion;
-import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer;
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandleResult;
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler;
 import io.github.rosemoe.sora.lang.styling.Styles;
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
 import io.github.rosemoe.sora.langs.textmate.TextMateSymbolPairMatch;
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
+import org.eclipse.tm4e.core.grammar.IGrammar;
+import java.util.List;
+import java.util.Objects;
+
 import io.github.rosemoe.sora.text.CharPosition;
 import io.github.rosemoe.sora.text.Content;
-import io.github.rosemoe.sora.text.ContentLine;
 import io.github.rosemoe.sora.text.ContentReference;
 import io.github.rosemoe.sora.widget.SymbolPairMatch;
 
@@ -75,23 +71,36 @@ Thanks to @AndroidPrime
 */
 
 public class CustomAutoComplete extends EmptyLanguage {
-	private final TextMateLanguage mTextMateLanguage;
+	private final Language mLanguage;
 	private final CodeEditor mEditor;
 	private final IndentationRules mIndentationRules;
 	
-	public CustomAutoComplete(CodeEditor editor, String[] gotoItems) {
+	public CustomAutoComplete(CodeEditor editor, String[] gotoItems, Language language) {
 		mEditor = editor;
+		mLanguage = language;
 		editor.getComponent(EditorAutoCompletion.class).setMaxHeight(100);
 		editor.getComponent(EditorAutoCompletion.class).setLayout(new CustomCompletionLayout());
 		editor.getComponent(EditorAutoCompletion.class).setAdapter(new CustomCompletionItemAdapter());
-		//editor.getComponent(EditorAutoCompletion.class).getParentView().setBackgroundColor(Color.BLACK );
-		String scope = GrammarRegistry.getInstance().loadGrammars("languages.json").get(0).getScopeName();
-		mTextMateLanguage = TextMateLanguage.create(scope, true);
-		mIndentationRules = GrammarRegistry.getInstance().findLanguageConfiguration(scope).getIndentationRules();
 		
-		mTextMateLanguage.setAutoCompleteEnabled(true);
-		mTextMateLanguage.setTabSize(editor.getTabWidth());
-		((TextMateSymbolPairMatch)mTextMateLanguage.getSymbolPairs()).setEnabled(true);
+		IndentationRules rules = null;
+		if (language instanceof TextMateLanguage) {
+			try {
+				rules = Objects.requireNonNull(GrammarRegistry.getInstance().findLanguageConfiguration("source.smali")).getIndentationRules();
+			} catch (Exception e) {
+				// Ignore
+			}
+		}
+		mIndentationRules = rules;
+		
+		if (mLanguage instanceof TextMateLanguage) {
+			TextMateLanguage tm = (TextMateLanguage) mLanguage;
+			tm.setAutoCompleteEnabled(true);
+			tm.setTabSize(editor.getTabWidth());
+			if (tm.getSymbolPairs() instanceof TextMateSymbolPairMatch) {
+				((TextMateSymbolPairMatch)tm.getSymbolPairs()).setEnabled(true);
+			}
+		}
+		
 		String[] ks = {
 			".class", ".super", ".source", ".implements", ".field", ".method", ".end method",
 			".registers", ".locals", ".param", ".prologue", ".line", ".end local", ".restart local",
@@ -117,16 +126,18 @@ public class CustomAutoComplete extends EmptyLanguage {
 			".sparse-switch", ".end sparse-switch"
 		};
 		
-		if(gotoItems == null){
-			mTextMateLanguage.setCompleterKeywords(ks);
-		}else {
-			mTextMateLanguage.setCompleterKeywords(gotoItems);
+		if(mLanguage instanceof TextMateLanguage) {
+			TextMateLanguage tm = (TextMateLanguage) mLanguage;
+			if(gotoItems == null){
+				tm.setCompleterKeywords(ks);
+			}else {
+				// Merge ks and gotoItems
+				java.util.Set<String> allKeywords = new java.util.HashSet<>(java.util.Arrays.asList(ks));
+				allKeywords.addAll(java.util.Arrays.asList(gotoItems));
+				tm.setCompleterKeywords(allKeywords.toArray(new String[0]));
+			}
 		}
-		
-		
-		
 	}
-	
 	
 	@Override
 	public int getIndentAdvance(@NonNull ContentReference content, int line, int column) {
@@ -134,10 +145,11 @@ public class CustomAutoComplete extends EmptyLanguage {
 	}
 	
 	public int getIndentAdvance(String line) {
+		if (mIndentationRules == null || mIndentationRules.increaseIndentPattern == null) {
+			return 0;
+		}
 		return line.matches(mIndentationRules.increaseIndentPattern.pattern()) ? mEditor.getTabWidth() : 0;
 	}
-	
-	
 	
 	private final NewlineHandler[] mNewlineHandlers = new NewlineHandler[]{new EndwiseNewlineHandler()};
 	
@@ -148,29 +160,27 @@ public class CustomAutoComplete extends EmptyLanguage {
 	
 	@Override
 	public SymbolPairMatch getSymbolPairs() {
-		return mTextMateLanguage.getSymbolPairs();
+		return mLanguage != null ? mLanguage.getSymbolPairs() : super.getSymbolPairs();
 	}
 	
 	@Override
 	@NonNull
 	public AnalyzeManager getAnalyzeManager() {
-		return mTextMateLanguage.getAnalyzeManager();
+		return mLanguage != null ? mLanguage.getAnalyzeManager() : super.getAnalyzeManager();
 	}
 	
 	@Override
 	public void requireAutoComplete(@NonNull ContentReference content, @NonNull CharPosition position, @NonNull CompletionPublisher publisher, @NonNull Bundle extraArguments) {		
-		
-		mTextMateLanguage.requireAutoComplete(content, position, publisher, extraArguments);
-		
+		if (mLanguage != null) {
+			mLanguage.requireAutoComplete(content, position, publisher, extraArguments);
+		}
 	}
 	
 	public class EndwiseNewlineHandler implements NewlineHandler {
 		private static final String ENDWISE_PATTERN = "^((?!(--)).)*(\\b(else|function|then|do|repeat)\\b((?!\\b(end|until)\\b).)*)$";
 		
-		private final StringBuilder mStringBuilder = new StringBuilder();
-		
 		@Override
-		public boolean matchesRequirement(@NonNull Content text, @NonNull CharPosition position, /*@Nullable */Styles style) {
+		public boolean matchesRequirement(@NonNull Content text, @NonNull CharPosition position, Styles style) {
 			String line = text.getLineString(position.line);
 			String beforeText = line.substring(0, position.column);
 			
@@ -179,8 +189,7 @@ public class CustomAutoComplete extends EmptyLanguage {
 		
 		@NonNull
 		@Override
-		public NewlineHandleResult handleNewline(@NonNull Content text, @NonNull CharPosition position, /*@Nullable */Styles style, int tabSize) {
-			//result,shift
+		public NewlineHandleResult handleNewline(@NonNull Content text, @NonNull CharPosition position, Styles style, int tabSize) {
 			return new NewlineHandleResult("",0);
 		}
 		

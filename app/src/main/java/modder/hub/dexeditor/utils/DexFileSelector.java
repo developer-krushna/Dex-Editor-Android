@@ -36,7 +36,9 @@
 
 package modder.hub.dexeditor.utils;
 
-import android.app.AlertDialog;
+import android.annotation.SuppressLint;
+import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.widget.Button;
@@ -52,13 +54,13 @@ Author @developer-krushna
 
 
 public class DexFileSelector {
-	private Context context;
-	private File folder;
-	private List<String> dexFiles;
+	private final Context context;
+	private final File folder;
+	private final List<String> dexFiles;
 	private boolean[] selectedItems;
 	private AlertDialog dialog;
 	private OnFilesSelectedListener listener;
-	private String initialDexPath;
+	private final String initialDexPath;
 	
 	public interface OnFilesSelectedListener {
 		void onFilesSelected(List<String> selectedFilePaths);
@@ -93,7 +95,7 @@ public class DexFileSelector {
 					dexFiles.add(initialDexFile.getAbsolutePath());
 				}
 				
-				Collections.sort(dexFiles, new NaturalOrderComparator());
+				dexFiles.sort(new NaturalOrderComparator());
 			} else {
 				dexFiles.add(initialDexFile.getAbsolutePath());
 			}
@@ -108,8 +110,9 @@ public class DexFileSelector {
 		
 		if (dexFiles.size() == 1) {
 			if (listener != null) {
-				List<String> singleFileList = new ArrayList<String>();
-				singleFileList.add(dexFiles.get(0));
+				List<String> singleFileList;
+                singleFileList = new ArrayList<String>();
+                singleFileList.add(dexFiles.get(0));
 				listener.onFilesSelected(singleFileList);
 			}
 			return;
@@ -126,7 +129,7 @@ public class DexFileSelector {
 			selectedItems[initialIndex] = true;
 		}
 		
-		AlertDialog.Builder builder = new AlertDialog.Builder(context);
+		MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 		builder.setTitle("MultiDex");
 		builder.setMultiChoiceItems(fileNames, selectedItems, new DialogInterface.OnMultiChoiceClickListener() {
 			public void onClick(DialogInterface dialog, int which, boolean isChecked) {
@@ -156,11 +159,13 @@ public class DexFileSelector {
 			public void onShow(DialogInterface dialogInterface) {
 				Button invertButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
 				invertButton.setOnClickListener(new android.view.View.OnClickListener() {
-					public void onClick(android.view.View v) {
+					@SuppressLint("SetTextI18n")
+                    public void onClick(android.view.View v) {
 						String buttonText = invertButton.getText().toString();
-						AlertDialog alertDialog = (AlertDialog) dialog;
-						
-						if (buttonText.equals("Select All")) {
+						AlertDialog alertDialog;
+                        alertDialog = (AlertDialog) dialog;
+
+                        if (buttonText.equals("Select All")) {
 							// First click: select all
 							for (int i = 0; i < selectedItems.length; i++) {
 								selectedItems[i] = true;
@@ -182,7 +187,7 @@ public class DexFileSelector {
 		dialog.show();
 	}
 	
-	public class NaturalOrderComparator implements Comparator<String> {
+	public static class NaturalOrderComparator implements Comparator<String> {
 		@Override
 		public int compare(String a, String b) {
 			int aLength = a.length();

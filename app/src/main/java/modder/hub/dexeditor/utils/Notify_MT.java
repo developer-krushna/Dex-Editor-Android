@@ -37,60 +37,15 @@
 
 package modder.hub.dexeditor.utils;
 
-import android.app.AlertDialog.Builder;
+import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.content.Context;
-import android.content.DialogInterface.*;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
-import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
-import android.graphics.Color;
-import android.text.Html;
-import android.widget.TextView;
-import android.app.DialogFragment;
-import android.widget.LinearLayout;
-import android.widget.EditText;
-import android.widget.ScrollView;
-import android.view.Gravity;
-import android.text.SpannableString;
-import android.view.ViewGroup;
-import android.util.Base64;
-import android.widget.ListView;
-import android.view.View;
-import android.widget.RelativeLayout.LayoutParams;
+import android.graphics.drawable.GradientDrawable;
 import android.view.WindowManager;
-import android.animation.*;
-import android.app.*;
-import android.app.Activity;
-import android.app.DialogFragment;
-import android.app.Fragment;
-import android.app.FragmentManager;
-import android.content.*;
-import android.content.res.*;
-import android.graphics.*;
-import android.graphics.drawable.*;
-import android.media.*;
-import android.net.*;
-import android.os.*;
-import android.text.*;
-import android.text.style.*;
-import android.util.*;
-import android.view.*;
-import android.view.View.*;
-import android.view.animation.*;
-import android.webkit.*;
-import android.widget.*;
-import java.io.*;
-import java.text.*;
-import java.util.*;
-import java.util.regex.*;
-import org.json.*;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import modder.hub.dexeditor.views.*;
-import modder.hub.dexeditor.utils.*;
-import modder.hub.dexeditor.*;
+import android.widget.TextView;
+
+import java.util.Objects;
 
 /*
 Author @developer-krushna
@@ -103,7 +58,7 @@ public class Notify_MT {
 	
 	public static void Notify(Context context, String title_mt, String message_mt, String cancel_mt) {
 		try {
-			final Builder builder = new Builder(context);
+			final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 			builder.setTitle(title_mt);
 			builder.setMessage(message_mt);
 			builder.setPositiveButton(cancel_mt, new DialogInterface.OnClickListener() {
@@ -113,34 +68,23 @@ public class Notify_MT {
 				}
 			});
 			
-			// Setting custom background
-			final AlertDialog alert = builder.create();
-			alert.getWindow().setBackgroundDrawable(createDrawable(cornerRadius, 0xFFFFFFFF));
-			alert.show();
+			final AlertDialog alert = builder.show();
 			final TextView message = alert.findViewById(android.R.id.message);
-			message.setTextIsSelectable(true);
+			if (message != null) {
+				message.setTextIsSelectable(true);
+			}
 		} catch (WindowManager.BadTokenException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	
-	public static void Dlg_Style(AlertDialog.Builder dialog){
-		final AlertDialog alert = dialog.create();
-		alert.getWindow().setBackgroundDrawable(createDrawable(cornerRadius, 0xFFFFFFFF));
+	public static void Dlg_Style(MaterialAlertDialogBuilder dialog){
 		try{
-			alert.show();
-		} catch (WindowManager.BadTokenException e){
+			dialog.show();
+		} catch (WindowManager.BadTokenException ignored){
 			
 		}
 		
 	}
-	public static GradientDrawable createDrawable(int cornerRadiuss, int color) {
-		GradientDrawable drawable = new GradientDrawable();
-		drawable.setCornerRadius(cornerRadiuss);
-		drawable.setColor(color);
-		return drawable;
-	}
-	
-	
 }

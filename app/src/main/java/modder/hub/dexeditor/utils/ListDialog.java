@@ -35,15 +35,14 @@
 
 package modder.hub.dexeditor.utils;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -69,12 +68,10 @@ Code fixed and enhancement by ChatGPT
 */
 
 public class ListDialog extends Dialog {
-	private final RecyclerView recyclerView;
-	private final LabelAdapter adapter;
+    private final LabelAdapter adapter;
 	private final List<String> originalItems;
 	private final int highlightLineNumber;
-	private final int highlightColor = 0xFF42A5F5;
-	private OnLabelClickListener labelClickListener;
+    private OnLabelClickListener labelClickListener;
 	
 	private String currentQuery = "";
 	
@@ -83,8 +80,8 @@ public class ListDialog extends Dialog {
 		super(context);
 		this.originalItems = new ArrayList<>(items);
 		this.highlightLineNumber = editorLineNumber + 1;
-		
-		recyclerView = new RecyclerView(context);
+
+        RecyclerView recyclerView = new RecyclerView(context);
 		recyclerView.setLayoutParams(new ViewGroup.LayoutParams(
 		ViewGroup.LayoutParams.MATCH_PARENT,
 		ViewGroup.LayoutParams.WRAP_CONTENT
@@ -139,7 +136,8 @@ public class ListDialog extends Dialog {
 			
 			// Apply line number highlighting
 			if (lineNumber == highlightLineNumber) {
-				spannable.setSpan(new ForegroundColorSpan(highlightColor), 
+                int highlightColor = 0xFF42A5F5;
+                spannable.setSpan(new ForegroundColorSpan(highlightColor),
 				0, item.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 			}
 			
@@ -166,7 +164,8 @@ public class ListDialog extends Dialog {
 			return filteredItems.size();
 		}
 		
-		void updateItems(List<String> items) {
+		@SuppressLint("NotifyDataSetChanged")
+        void updateItems(List<String> items) {
 			filteredItems = new ArrayList<>(items);
 			notifyDataSetChanged();
 		}

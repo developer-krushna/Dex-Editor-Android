@@ -103,6 +103,7 @@ public class SketchwareUtil {
 		});
 	}
 	
+	@SuppressWarnings("deprecation")
 	public static void CropImage(Activity _activity, String _path, int _requestCode) {
 		try {
 			Intent _intent = new Intent("com.android.camera.action.CROP");

@@ -36,21 +36,16 @@
 package modder.hub.dexeditor.utils;
 
 import android.content.Context;
-import android.util.Log;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Set;
 
-/*
-Author @developer-krushna
-*/
+// Author @developer-krushna
 
 public class SmaliInstructionHelper {
 	private static final Set<String> INSTRUCTIONS = new HashSet<>();
@@ -73,7 +68,7 @@ public class SmaliInstructionHelper {
 		}
 	}
 	
-	//checking full instruction namr
+	//checking full instruction name
 	public static boolean isSmaliInstruction(String word) {
 		if (word == null) return false;
 		
@@ -91,7 +86,7 @@ public class SmaliInstructionHelper {
 	}
 	
 	// TO-DO 
-	// loading instructions into arraylist for auto completion
+	// loading instructions into arraylist for auto-completion
 	public static String[] getAllSmaliInstructions() {
 		return INSTRUCTIONS.toArray(new String[0]);
 	}

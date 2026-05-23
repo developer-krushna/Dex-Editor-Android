@@ -36,146 +36,167 @@
 
 package modder.hub.dexeditor.utils;
 
-import android.text.TextUtils;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+import android.annotation.SuppressLint;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import io.github.rosemoe.sora.text.Content;
 
 public class SmaliCursorUtils {
-	/*
-	Author @developer-krushna
-	Code fixed/regex/comments by ChatGPT
-	*/
-	
-	public static String getCurrentMethodOrFieldName(CharSequence text, int cursorLine) {
-		String[] lines = text.toString().split("\n");
-		
-		// First check methods
-		String methodInfo = getCurrentMethodName(lines, cursorLine);
-		if (methodInfo != null) return methodInfo + "()";
-		
-		// Then check fields
-		return getCurrentFieldName(lines, cursorLine);
-	}
-	
-	private static String getCurrentMethodName(String[] lines, int cursorLine) {
-		int methodStart = -1;
-		String methodName = null;
-		
-		// Search upwards for .method
-		for (int i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
-			String line = lines[i].trim();
-			if (line.startsWith(".method ")) {
-				methodStart = i;
-				String[] tokens = line.split("\\s+");
-				methodName = tokens[tokens.length - 1]; // Get last token
-				methodName = methodName.substring(0, methodName.indexOf('(')); // Get text before "("
-				break;
-			}
-		}
-		
-		if (methodStart == -1) return null;
-		
-		// Check if cursor is within method bounds
-		for (int i = methodStart + 1; i < lines.length; i++) {
-			if (lines[i].trim().startsWith(".end method")) {
-				if (cursorLine >= methodStart && cursorLine <= i) {
-					return String.format("[%d-%d] : %s", 
-					methodStart + 1, i + 1, methodName);
-				}
-				break;
-			}
-		}
-		return null;
-	}
-	
-	private static String getCurrentFieldName(String[] lines, int cursorLine) {
-		for (int i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
-			String line = lines[i].trim();
-			if (line.startsWith(".field ") && i == cursorLine) {
-				String[] parts = line.split("\\s+");
-				for (String part : parts) {
-					if (part.contains(":")) {
-						return String.format("[%d] : %s", 
-						i + 1, part.substring(0, part.indexOf(':')));
-					}
-				}
-			}
-		}
-		return null;
-	}
-	
-	
-	public static List<String> extractAllLabelLines(CharSequence text, int cursorLine) {
-		List<String> labelLines = new ArrayList<>();
-		String[] lines = text.toString().split("\n");
-		
-		MethodBoundary method = findMethodBoundary(lines, cursorLine);
-		if (method == null) return labelLines;
-		
-		// List of individual patterns for each label type
-		String[] patterns = {
-			// Conditional branches
-			"if-(?:eq|ne|lt|gt|le|ge|eqz|nez|ltz|gtz|lez|gez)\\b.*?:(\\w+)",
-			// Unconditional branches
-			"goto\\s+:([^\\s,]+)",
-			// Switch cases
-			"(?:packed|sparse)-switch\\b.*?:(\\w+)",
-			// Exception handlers
-			"(?:catch|catchall).*?\\{:(\\w+)\\s+\\.\\.\\s+:(\\w+)\\}.*?:(\\w+)",
-			// Try blocks
-			"\\.try_(?:start|end)_(\\w+)",
-			// Switch case entries (0x... -> :label)
-			"0x[0-9a-f]+\\s*->\\s*:(\\w+)",
-			// Plain labels
-			"^\\s*:(\\w+)"
-		};
-		
-		for (int lineNum = method.startLine; lineNum <= method.endLine; lineNum++) {
-			String line = lines[lineNum].trim();
-			if (line.isEmpty() || line.startsWith("#") || line.startsWith(".field")) {
-				continue;
-			}
-			
-			// Check against each pattern individually
-			for (String pattern : patterns) {
-				if (Pattern.matches(".*" + pattern + ".*", line)) {
-					labelLines.add(String.format("[%d] %s", lineNum + 1, line));
-					break; // Found a match, move to next line
-				}
-			}
-		}
-		return labelLines;
-	}
-	
-	private static class MethodBoundary {
-		int startLine;
-		int endLine;
-	}
-	
-	private static MethodBoundary findMethodBoundary(String[] lines, int cursorLine) {
-		MethodBoundary boundary = new MethodBoundary();
-		boundary.startLine = -1;
-		
-		for (int i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
-			if (lines[i].trim().startsWith(".method ")) {
-				boundary.startLine = i;
-				break;
-			}
-		}
-		
-		if (boundary.startLine == -1) return null;
-		
-		for (int i = boundary.startLine + 1; i < lines.length; i++) {
-			if (lines[i].trim().startsWith(".end method")) {
-				boundary.endLine = i;
-				return boundary;
-			}
-		}
-		return null;
-	}
+    // Author @developer-krushna
+    // Optimized by Assistant to avoid expensive string splitting and fix crashes
+
+    public static String getCurrentMethodOrFieldName(CharSequence text, int cursorLine) {
+        // First check methods
+        String methodInfo = getCurrentMethodName(text, cursorLine);
+        if (methodInfo != null) return methodInfo + "()";
+        
+        // Then check fields
+        return getCurrentFieldName(text, cursorLine);
+    }
+    
+    @SuppressLint("DefaultLocale")
+    private static String getCurrentMethodName(CharSequence text, int cursorLine) {
+        int methodStart = -1;
+        String methodName = null;
+        
+        // Search upwards for .method
+        for (int i = cursorLine; i >= 0; i--) {
+            String line = getLine(text, i);
+            if (line == null) break;
+            line = line.trim();
+            if (line.startsWith(".method ")) {
+                methodStart = i;
+                String[] tokens = line.split("\\s+");
+                if (tokens.length > 0) {
+                    methodName = tokens[tokens.length - 1]; // Get last token
+                    int pIndex = methodName.indexOf('(');
+                    if (pIndex != -1) {
+                        methodName = methodName.substring(0, pIndex);
+                    }
+                }
+                break;
+            }
+        }
+        
+        if (methodStart == -1 || methodName == null) return null;
+        
+        // Check if cursor is within method bounds
+        for (int i = methodStart + 1; ; i++) {
+            String line = getLine(text, i);
+            if (line == null) break;
+            String trimmed = line.trim();
+            if (trimmed.startsWith(".end method")) {
+                if (cursorLine >= methodStart && cursorLine <= i) {
+                    return String.format("[%d-%d] : %s", 
+                    methodStart + 1, i + 1, methodName);
+                }
+                break;
+            }
+            // Safety break if it's taking too long or we reached next method without .end method
+            if (trimmed.startsWith(".method ") && i > methodStart) break;
+        }
+        return null;
+    }
+    
+    @SuppressLint("DefaultLocale")
+    private static String getCurrentFieldName(CharSequence text, int cursorLine) {
+        String line = getLine(text, cursorLine);
+        if (line == null) return null;
+        String trimmed = line.trim();
+        if (trimmed.startsWith(".field ")) {
+            String[] parts = trimmed.split("\\s+");
+            for (String part : parts) {
+                if (part.contains(":")) {
+                    return String.format("[%d] : %s", 
+                    cursorLine + 1, part.substring(0, part.indexOf(':')));
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String getLine(CharSequence text, int index) {
+        if (text instanceof Content) {
+            Content content = (Content) text;
+            if (index < 0 || index >= content.getLineCount()) return null;
+            return content.getLineString(index);
+        } else {
+            // Fallback for non-Content CharSequence (less efficient but safer)
+            String[] lines = text.toString().split("\n");
+            if (index < 0 || index >= lines.length) return null;
+            return lines[index];
+        }
+    }
+    
+    @SuppressLint("DefaultLocale")
+    public static List<String> extractAllLabelLines(CharSequence text, int cursorLine) {
+        List<String> labelLines = new ArrayList<>();
+        
+        MethodBoundary method = findMethodBoundary(text, cursorLine);
+        if (method == null) return labelLines;
+        
+        // List of patterns
+        Pattern[] patterns = {
+            Pattern.compile("if-(?:eq|ne|lt|gt|le|ge|eqz|nez|ltz|gtz|lez|gez)\\b.*?:(\\w+)"),
+            Pattern.compile("goto\\s+:([^\\s,]+)"),
+            Pattern.compile("(?:packed|sparse)-switch\\b.*?:(\\w+)"),
+            Pattern.compile("(?:catch|catchall).*?\\{:(\\w+)\\s+\\.\\.\\s+:(\\w+)\\}.*?:(\\w+)"),
+            Pattern.compile("\\.try_(?:start|end)_(\\w+)"),
+            Pattern.compile("0x[0-9a-f]+\\s*->\\s*:(\\w+)"),
+            Pattern.compile("^\\s*:(\\w+)")
+        };
+        
+        for (int lineNum = method.startLine; lineNum <= method.endLine; lineNum++) {
+            String line = getLine(text, lineNum);
+            if (line == null) break;
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith(".field")) {
+                continue;
+            }
+            
+            for (Pattern p : patterns) {
+                if (p.matcher(trimmed).find()) {
+                    labelLines.add(String.format("[%d] %s", lineNum + 1, trimmed));
+                    break;
+                }
+            }
+        }
+        return labelLines;
+    }
+    
+    private static class MethodBoundary {
+        int startLine;
+        int endLine;
+    }
+    
+    private static MethodBoundary findMethodBoundary(CharSequence text, int cursorLine) {
+        MethodBoundary boundary = new MethodBoundary();
+        boundary.startLine = -1;
+        
+        for (int i = cursorLine; i >= 0; i--) {
+            String line = getLine(text, i);
+            if (line == null) break;
+            if (line.trim().startsWith(".method ")) {
+                boundary.startLine = i;
+                break;
+            }
+        }
+        
+        if (boundary.startLine == -1) return null;
+        
+        for (int i = boundary.startLine + 1; ; i++) {
+            String line = getLine(text, i);
+            if (line == null) break;
+            if (line.trim().startsWith(".end method")) {
+                boundary.endLine = i;
+                return boundary;
+            }
+            if (line.trim().startsWith(".method ")) break;
+        }
+        return null;
+    }
 }
