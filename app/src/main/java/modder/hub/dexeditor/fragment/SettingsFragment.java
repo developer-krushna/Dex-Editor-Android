@@ -42,11 +42,15 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+
+import java.util.Objects;
+
 import modder.hub.dexeditor.R;
 import modder.hub.dexeditor.activity.EditFloatingMenusActivity;
 
@@ -92,22 +96,24 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		if (apiKeyPref != null) {
 			apiKeyPref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
 				@Override
-				public boolean onPreferenceChange(Preference preference, Object newValue) {
+				public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
 					return validateAndSetApiKey(preference, (String) newValue);
 				}
 			});
 			
 			// Set initial summary
 			String currentApiKey = apiKeyPref.getText();
-			apiKeyPref.setSummary(formatApiKeySummary(currentApiKey));
-		}
+            if (currentApiKey != null) {
+                apiKeyPref.setSummary(formatApiKeySummary(currentApiKey));
+            }
+        }
 		
 		// Website preference
 		Preference websitePref = findPreference(KEY_GEMINI_WEBSITE);
 		if (websitePref != null) {
 			websitePref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 				@Override
-				public boolean onPreferenceClick(Preference preference) {
+				public boolean onPreferenceClick(@NonNull Preference preference) {
 					openChatGptWebsite();
 					return true;
 				}
@@ -144,7 +150,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		if (floatingMenuPref != null) {
 			floatingMenuPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 				@Override
-				public boolean onPreferenceClick(Preference preference) {
+				public boolean onPreferenceClick(@NonNull Preference preference) {
 					startActivity(new Intent(getActivity(), EditFloatingMenusActivity.class));
 					return true;
 				}
@@ -163,13 +169,13 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	@Override
 	public void onResume() {
 		super.onResume();
-		getPreferenceManager().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
+		Objects.requireNonNull(getPreferenceManager().getSharedPreferences()).registerOnSharedPreferenceChangeListener(this);
 	}
 	
 	@Override
 	public void onPause() {
 		super.onPause();
-		getPreferenceManager().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
+		Objects.requireNonNull(getPreferenceManager().getSharedPreferences()).unregisterOnSharedPreferenceChangeListener(this);
 	}
 	
 	@Override
