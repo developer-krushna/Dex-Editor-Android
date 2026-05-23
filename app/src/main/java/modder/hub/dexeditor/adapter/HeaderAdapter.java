@@ -27,55 +27,58 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
  */
 
 package modder.hub.dexeditor.adapter;
 
+import android.graphics.Color;
 import android.util.TypedValue;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
-import io.github.rosemoe.sora.lang.completion.CompletionItem;
-import io.github.rosemoe.sora.widget.component.EditorCompletionAdapter;
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
-import modder.hub.dexeditor.R;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 /*
- * Author : @developer-krushna
- * ideas and code help by @abodinagdat16
+ * Author - @developer-krushna
+ * this class responsible for adding a section within the recyclerview adapter
  */
-public final class CustomCompletionItemAdapter extends EditorCompletionAdapter {
 
+public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.ViewHolder> {
+    private final String title;
+
+    public HeaderAdapter(String title) {
+        this.title = title;
+    }
+
+    @NonNull
     @Override
-    public int getItemHeight() {
-        // 45 dp
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getContext().getResources().getDisplayMetrics());
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        TextView textView = new TextView(parent.getContext());
+        textView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, parent.getResources().getDisplayMetrics());
+        textView.setPadding(padding, padding / 2, padding, padding / 2);
+        textView.setTextSize(14);
+        textView.setTextColor(Color.GRAY);
+        textView.setBackgroundColor(Color.parseColor("#F5F5F5"));
+        return new ViewHolder(textView);
     }
 
     @Override
-    public View getView(int pos, View view, ViewGroup parent, boolean isCurrentCursorPosition) {
-        if (view == null) {
-            view = LayoutInflater.from(getContext()).inflate(R.layout.custom_completion_item_layout, parent, false);
-        }
-        CompletionItem item = getItem(pos);
-
-        TextView tv = view.findViewById(R.id.result_item_label);
-        tv.setText(item.label);
-        tv.setTextColor(getThemeColor(EditorColorScheme.COMPLETION_WND_TEXT_PRIMARY));
-
-        view.setTag(pos);
-        if (isCurrentCursorPosition) {
-            view.setBackgroundColor(getThemeColor(EditorColorScheme.COMPLETION_WND_ITEM_CURRENT));
-        } else {
-            view.setBackgroundColor(0);
-        }
-        return view;
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        ((TextView) holder.itemView).setText(title);
     }
 
+    @Override
+    public int getItemCount() {
+        return 1;
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+        }
+    }
 }

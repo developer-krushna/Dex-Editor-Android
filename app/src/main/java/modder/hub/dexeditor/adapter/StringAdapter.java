@@ -27,55 +27,64 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
- *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
- *     additional information or have any questions
  */
 
 package modder.hub.dexeditor.adapter;
 
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
-import io.github.rosemoe.sora.lang.completion.CompletionItem;
-import io.github.rosemoe.sora.widget.component.EditorCompletionAdapter;
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.List;
 import modder.hub.dexeditor.R;
-
 /*
- * Author : @developer-krushna
- * ideas and code help by @abodinagdat16
+ * Author - @developer-krushna
+ * this class responsible for listing strings from dex files
  */
-public final class CustomCompletionItemAdapter extends EditorCompletionAdapter {
+public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder> {
+    private List<String> strings;
+    private OnStringClickListener listener;
 
+    public interface OnStringClickListener {
+        void onStringClick(String text);
+    }
+
+    public StringAdapter(List<String> strings, OnStringClickListener listener) {
+        this.strings = strings;
+        this.listener = listener;
+    }
+
+    @NonNull
     @Override
-    public int getItemHeight() {
-        // 45 dp
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getContext().getResources().getDisplayMetrics());
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.string_item, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
-    public View getView(int pos, View view, ViewGroup parent, boolean isCurrentCursorPosition) {
-        if (view == null) {
-            view = LayoutInflater.from(getContext()).inflate(R.layout.custom_completion_item_layout, parent, false);
-        }
-        CompletionItem item = getItem(pos);
-
-        TextView tv = view.findViewById(R.id.result_item_label);
-        tv.setText(item.label);
-        tv.setTextColor(getThemeColor(EditorColorScheme.COMPLETION_WND_TEXT_PRIMARY));
-
-        view.setTag(pos);
-        if (isCurrentCursorPosition) {
-            view.setBackgroundColor(getThemeColor(EditorColorScheme.COMPLETION_WND_ITEM_CURRENT));
-        } else {
-            view.setBackgroundColor(0);
-        }
-        return view;
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        final String text = strings.get(position);
+        holder.stringText.setText(text);
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (listener != null) listener.onStringClick(text);
+            }
+        });
     }
 
+    @Override
+    public int getItemCount() {
+        return strings.size();
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView stringText;
+        ViewHolder(View itemView) {
+            super(itemView);
+            stringText = itemView.findViewById(R.id.string_text);
+        }
+    }
 }
