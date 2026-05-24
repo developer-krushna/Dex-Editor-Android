@@ -52,6 +52,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -87,6 +88,9 @@ import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
+import modder.hub.dexeditor.utils.TreeHelper;
+import modder.hub.dexeditor.utils.UIHelper;
+import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import modder.hub.dexeditor.views.AlertProgress;
 
 // Author : @developer-krushna
@@ -128,16 +132,18 @@ public class SearchFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_search, container, false);
-        btnNewSearch = view.findViewById(R.id.btn_new_search);
-        btnSearchInResults = view.findViewById(R.id.btn_search_in_results);
-        btnReplaceInResults = view.findViewById(R.id.btn_replace_in_results);
-        btnClearResults = view.findViewById(R.id.btn_clear_results);
-        layoutSearchInfo = view.findViewById(R.id.layout_search_info);
-        tvSearchInfo = view.findViewById(R.id.tv_search_results_info);
-        btnSearchMenu = view.findViewById(R.id.btn_search_menu);
         recyclerView = view.findViewById(R.id.search_results_rv);
-
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+
+        // Inflate the header view that contains the search functions and info bar
+        View headerView = inflater.inflate(R.layout.search_header, recyclerView, false);
+        btnNewSearch = headerView.findViewById(R.id.btn_new_search);
+        btnSearchInResults = headerView.findViewById(R.id.btn_search_in_results);
+        btnReplaceInResults = headerView.findViewById(R.id.btn_replace_in_results);
+        btnClearResults = headerView.findViewById(R.id.btn_clear_results);
+        layoutSearchInfo = headerView.findViewById(R.id.layout_search_info);
+        tvSearchInfo = headerView.findViewById(R.id.tv_search_results_info);
+        btnSearchMenu = headerView.findViewById(R.id.btn_search_menu);
 
         // Set up the results list with a custom TreeAdapter
         DexEditorActivity activity = (DexEditorActivity) getActivity();
@@ -170,11 +176,14 @@ public class SearchFragment extends Fragment {
 
                 @Override
                 public void onCopyName(TreeNode node) {
-                    activity.copiedToClipboard(node.getName());
+                    UIHelper.copyToClipboard(requireContext(), node.getName());
                 }
             }, false);
             adapter.setSearchList(true, currentQuery);
-            recyclerView.setAdapter(adapter);
+
+            // Use ConcatAdapter to combine the header and the results list
+            ConcatAdapter concatAdapter = new ConcatAdapter(new HeaderViewAdapter(headerView), adapter);
+            recyclerView.setAdapter(concatAdapter);
         }
 
         btnNewSearch.setOnClickListener(new View.OnClickListener() {
@@ -214,8 +223,39 @@ public class SearchFragment extends Fragment {
         });
 
         updateUIState();
+        new FastScrollerBuilder(recyclerView).build();
 
         return view;
+    }
+
+    // A simple adapter to hold a single View (header)
+    private static class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.ViewHolder> {
+        private final View view;
+
+        HeaderViewAdapter(View view) {
+            this.view = view;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        }
+
+        @Override
+        public int getItemCount() {
+            return 1;
+        }
+
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            ViewHolder(View view) {
+                super(view);
+            }
+        }
     }
 
     /**
@@ -301,15 +341,15 @@ public class SearchFragment extends Fragment {
             public boolean onMenuItemClick(android.view.MenuItem item) {
                 switch (item.getItemId()) {
                     case 1:
-                        collapseAll(searchResults);
+                        TreeHelper.collapseAll(searchResults);
                         adapter.refreshVisibleNodes();
                         return true;
                     case 2:
-                        expandAll(searchResults);
+                        TreeHelper.expandAll(searchResults);
                         adapter.refreshVisibleNodes();
                         return true;
                     case 3:
-                        onlyExpandPackages(searchResults);
+                        TreeHelper.onlyExpandPackages(searchResults);
                         adapter.refreshVisibleNodes();
                         return true;
                     case 4:
@@ -322,41 +362,11 @@ public class SearchFragment extends Fragment {
         popup.show();
     }
 
-    private void collapseAll(List<TreeNode> nodes) {
-        for (TreeNode node : nodes) {
-            node.setExpanded(false);
-            collapseAll(node.getChildren());
-        }
-    }
-
-    private void expandAll(List<TreeNode> nodes) {
-        for (TreeNode node : nodes) {
-            if (!node.getChildren().isEmpty()) {
-                node.setExpanded(true);
-                expandAll(node.getChildren());
-            }
-        }
-    }
-
-    private void onlyExpandPackages(List<TreeNode> nodes) {
-        for (TreeNode node : nodes) {
-            if (node.isDirectory()) {
-                node.setExpanded(true);
-                onlyExpandPackages(node.getChildren());
-            } else {
-                node.setExpanded(false);
-            }
-        }
-    }
-
     private void copyClassNames() {
         StringBuilder sb = new StringBuilder();
         collectClassNamesRecursive(searchResults, sb);
         if (sb.length() > 0) {
-            DexEditorActivity activity = (DexEditorActivity) getActivity();
-            if (activity != null) {
-                activity.copiedToClipboard(sb.toString().trim());
-            }
+            UIHelper.copyToClipboard(requireContext(), sb.toString().trim());
         }
     }
 
@@ -747,7 +757,7 @@ public class SearchFragment extends Fragment {
                 if (tab.type == 0) { // Smali
                     EditorFragment editorFrag = activity.getFragmentAtIndex(i);
                     if (editorFrag != null && editorFrag.getEditor() != null) {
-                        openTabsContent.put(tab.className, editorFrag.getEditor().getText().toString()); 
+                        openTabsContent.put(tab.className, editorFrag.getEditor().getText().toString());
                     } else {
                         openTabsContent.put(tab.className, tab.content);
                     }
@@ -756,7 +766,7 @@ public class SearchFragment extends Fragment {
 
             int numThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
             ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-            
+
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -997,10 +1007,16 @@ public class SearchFragment extends Fragment {
 
     /**
      * SearchTask: A multithreaded task that scans the DEX files for the given query.
-     * It handles different search modes and manages UI progress updates.
-     * The search will stop when back press twice, and even it will stop when search result reach 250k+
+     *
+     * ENHANCED FOR ULTRA SPEED (MT Manager Style):
+     * 1. DEX Pool Filtering: Skips classes instantly if query isn't in the DEX string pool.
+     * 2. Object Reuse: Uses ThreadLocal for BaksmaliOptions and String buffers.
+     * 3. Efficient Matching: Case-insensitive search without new string allocations.
      */
     private static class SearchTask {
+        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = ThreadLocal.withInitial(BaksmaliOptions::new);
+        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = ThreadLocal.withInitial(() -> new StringBuilder(64 * 1024));
+
         private final WeakReference<SearchFragment> fragmentRef;
         private final String query;
         private final String path;
@@ -1019,7 +1035,11 @@ public class SearchFragment extends Fragment {
         private final List<String> excludeList = new ArrayList<>();
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
         private final Map<String, String> openEditorsContent = new HashMap<>();
-        private final BaksmaliOptions baksmaliOptions = new BaksmaliOptions();
+
+        // Cache for DEX pool match results to avoid redundant scans
+        private final Map<Integer, Boolean> dexMatchCache = new ConcurrentHashMap<>();
+        private final java.util.Set<String> smaliKeywords = new java.util.HashSet<>();
+
         private AlertProgress progressDialog;
         private volatile boolean isStopped = false;
         private volatile boolean warningShown = false;
@@ -1037,6 +1057,8 @@ public class SearchFragment extends Fragment {
             this.isRegex = isRegex;
             this.exactlyMatch = exactlyMatch;
             this.scopeClasses = scopeClasses;
+
+            initSmaliKeywords();
 
             long targetValue = 0;
             boolean isNumberValid = false;
@@ -1088,6 +1110,19 @@ public class SearchFragment extends Fragment {
             } else {
                 this.compiledPattern = null;
             }
+        }
+
+        private void initSmaliKeywords() {
+            // Directives, registers, and opcode segments
+            String[] words = {
+                ".class", ".super", ".implements", ".source", ".field", ".method", ".end", ".registers", ".locals",
+                ".array-data", ".packed-switch", ".sparse-switch", ".catch", ".catchall", ".line", ".local", ".prologue",
+                ".epilogue", ".param", ".annotation", "move", "return", "const", "monitor", "check-cast", "instance-of",
+                "array-length", "new-instance", "new-array", "filled-new-array", "fill-array-data", "throw", "goto",
+                "cmpl", "cmpg", "cmp", "if", "aget", "aput", "sget", "sput", "iget", "iput", "invoke", "v0", "v1", "v2",
+                "v3", "v4", "v5", "p0", "p1", "p2"
+            };
+            Collections.addAll(smaliKeywords, words);
         }
 
         void start() {
@@ -1260,13 +1295,30 @@ public class SearchFragment extends Fragment {
 
                                             if (openContent != null) {
                                                 smali = openContent;
-                                            } else if (hasPending) {
-                                                smali = DexEditorActivity.classTree.getSmaliByType(classDef);
                                             } else {
+                                                // POOL-BASED PRE-FILTERING (Ultra Fast Optimization)
+                                                // If query isn't in the DEX string pool and isn't a Smali keyword, skip the class.
+                                                if (!isRegex && query.length() >= 3 && !isCommonSmaliWord(query)) {
+                                                    if (classDef instanceof com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef) {
+                                                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex = ((com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef) classDef).dexFile;
+                                                        if (!checkDexPool(dex, query, matchCase)) {
+                                                            updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
                                                 smali = generateSmali(classDef);
                                             }
 
                                             if (smali != null) {
+                                                // Fast-path match check
+                                                if (!isRegex && !query.contains("\n")) {
+                                                    if (!checkMatch(smali)) {
+                                                        updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                                        return;
+                                                    }
+                                                }
+
                                                 if (isRegex || query.contains("\n")) {
                                                     Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                                                     java.util.regex.Matcher matcher = pattern.matcher(smali);
@@ -1599,15 +1651,80 @@ public class SearchFragment extends Fragment {
             }
         }
 
+        private boolean isCommonSmaliWord(String query) {
+            if (query.contains(" ") || query.contains(",") || query.contains("{")) return true;
+            String lower = query.toLowerCase();
+            if (smaliKeywords.contains(lower)) return true;
+            // Literals or register ranges
+            char first = query.charAt(0);
+            return !Character.isLetter(first) && first != 'L';
+        }
+
+        private boolean checkDexPool(com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex, String query, boolean matchCase) {
+            int dexId = System.identityHashCode(dex);
+            Boolean cached = dexMatchCache.get(dexId);
+            if (cached != null) return cached;
+
+            boolean found = false;
+            java.util.List<String> pool = dex.getStringSection();
+            int count = pool.size();
+            for (int i = 0; i < count; i++) {
+                if (contains(pool.get(i), query, matchCase)) {
+                    found = true;
+                    break;
+                }
+            }
+            dexMatchCache.put(dexId, found);
+            return found;
+        }
+
+        private boolean contains(String text, String query, boolean matchCase) {
+            if (text == null) return false;
+            return matchCase ? text.contains(query) : containsIgnoreCase(text, query);
+        }
+
+        private String generateSmaliOptimized(ClassDef classDef) throws Exception {
+            StringBuilder sb = BUFFER_THREAD_LOCAL.get();
+            if (sb == null) return "";
+            sb.setLength(0);
+
+            // Consistent with ClassTree.getSmaliByType header
+            String dexFileName = "unknown.dex";
+            if (DexEditorActivity.classTree != null) {
+                dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
+            }
+            sb.append("# ").append(dexFileName).append("\n\n");
+
+            java.io.Writer writer = new java.io.Writer() {
+                @Override public void write(@NonNull char[] c, int o, int l) { sb.append(c, o, l); }
+                @Override public void flush() {}
+                @Override public void close() {}
+            };
+
+            BaksmaliWriter bw = new BaksmaliWriter(writer);
+            BaksmaliOptions options = OPTIONS_THREAD_LOCAL.get();
+            if (options == null) options = new BaksmaliOptions();
+
+            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(options, classDef).writeTo(bw);
+            bw.close();
+            return sb.toString();
+        }
+
         private String generateSmali(ClassDef classDef) throws Exception {
             if (DexEditorActivity.classTree != null) {
-                return DexEditorActivity.classTree.getSmaliByType(classDef);
+                String type = classDef.getType();
+                String typeKey = type.substring(1, type.length() - 1);
+                String pending = DexEditorActivity.classTree.getPendingSmaliMap().get(typeKey);
+                if (pending != null) {
+                    // Ensure header consistency even for pending smali
+                    if (pending.trim().startsWith("# ")) {
+                        pending = pending.replaceFirst("(?s)^#.*?\\n\\n", "");
+                    }
+                    String dexFileName = DexEditorActivity.classTree.findDexFileNameForClass(classDef);
+                    return "# " + dexFileName + "\n\n" + pending;
+                }
             }
-            StringWriter stringWriter = new StringWriter();
-            com.android.tools.smali.baksmali.formatter.BaksmaliWriter baksmaliWriter = new com.android.tools.smali.baksmali.formatter.BaksmaliWriter(stringWriter);
-            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(baksmaliOptions, classDef).writeTo(baksmaliWriter);
-            baksmaliWriter.close();
-            return stringWriter.toString();
+            return generateSmaliOptimized(classDef);
         }
 
         private String generateSmaliSafe(ClassDef classDef) {

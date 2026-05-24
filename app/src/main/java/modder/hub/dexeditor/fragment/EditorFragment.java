@@ -99,6 +99,8 @@ import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.utils.SmaliCursorUtils;
 import modder.hub.dexeditor.utils.EditorPositionManager;
+import modder.hub.dexeditor.utils.SmaliHelper;
+import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.TextActionWindow;
 
 
@@ -256,7 +258,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                                 ((DexEditorActivity) activity).locateClass(className);
                             }
                         } else {
-                            copiedToClipboard(Objects.requireNonNull(menuItem.getTitle()).toString());
+                            UIHelper.copyToClipboard(requireContext(), Objects.requireNonNull(menuItem.getTitle()).toString());
                         }
                         return true;
                     }
@@ -359,19 +361,22 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                     if (activity instanceof DexEditorActivity) {
                         final DexEditorActivity dexActivity = (DexEditorActivity) activity;
                         final String smaliCode = DexEditorActivity.classTree.getSmaliByType(Objects.requireNonNull(DexEditorActivity.classTree.classMap.get(className)));
-                        
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 initialContentText = smaliCode;
                                 smaliEditor.setText(smaliCode);
                                 progress.dismiss();
-                                
+
                                 final DexEditorActivity.EditorTab tab = dexActivity.getTabForClassName(className);
+                                if (tab != null) {
+                                    tab.content = smaliCode;
+                                }
                                 boolean hasPending = tab != null && tab.pendingLine != -1;
-                                
+
                                 postInitialize(hasPending);
-                                
+
                                 // Handle pending navigation
                                 if (hasPending) {
                                     new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
@@ -417,7 +422,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 isInitializing = false;
             }
         });
-        
+
         if (!skipRestorePosition) {
             new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                 @Override
@@ -486,7 +491,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 Log.e("EditorFragment", "Error setting smali language/scheme", e);
                 smaliEditor.setEditorLanguage(new EmptyLanguage());
             }
-            
+
             symbol_input.setVisibility(View.VISIBLE);
             if (symbol_input.getParent() instanceof View) {
                 ((View) symbol_input.getParent()).setVisibility(View.VISIBLE);
@@ -549,11 +554,6 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         }, 200);
     }
 
-    public void copiedToClipboard(String text) {
-        ((ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("clipboard", text));
-        SketchwareUtil.showMessage(requireContext(), "Text has been copied to clipboard");
-    }
-
     private void runOnUiThread(Runnable runnable) {
         if (getActivity() != null) {
             getActivity().runOnUiThread(runnable);
@@ -572,14 +572,14 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         return smaliEditor.getText().toString();
     }
 
-   
+
     public String getClassName() {
         return className;
     }
 
     public boolean isModified() {
         // left for something
-        return false; 
+        return false;
     }
 
     @Override
@@ -599,7 +599,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
 
     public void navigateTo(final int lineNum, final int column, final String query) {
         if (smaliEditor == null) return;
-        
+
         // If text is not loaded yet or line count is low, retry after a short delay
         if (smaliEditor.getText().getLineCount() <= lineNum) {
             new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
@@ -614,13 +614,13 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         try {
             if (lineNum >= 0 && lineNum < smaliEditor.getText().getLineCount()) {
                 smaliEditor.jumpToLine(lineNum);
-                
+
                 if (column >= 0 && column < smaliEditor.getText().getColumnCount(lineNum)) {
                     smaliEditor.getCursor().set(lineNum, column);
                 }
 
                 String getLineText = smaliEditor.getText().getLineString(lineNum);
-                
+
                 if (query != null && !query.isEmpty() && !query.contains("\n")) {
                     int start = getLineText.toLowerCase().indexOf(query.toLowerCase());
                     if (start != -1) {
@@ -631,7 +631,7 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
                 }
 
                 if (getLineText.contains("const-string")) {
-                    int[] positions = getOuterQuotePositions(getLineText);
+                    int[] positions = SmaliHelper.getOuterQuotePositions(getLineText);
                     if (positions[0] != -1 && positions[1] != -1) {
                         smaliEditor.setSelectionRegion(lineNum, (positions[0] + 1), lineNum, positions[1]);
                         dismissEditorWindow(smaliEditor);
@@ -640,8 +640,8 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
             }
         } catch (Exception ignored) {}
     }
-    
-    
+
+
 
     // get the action from the editor menu
     // mainly for the goto (jump to class name with method or field name)
@@ -782,23 +782,20 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         @Override
         public void run() {
             try {
-                if (isFileCreated.isEmpty() || !FileUtil.isExistFile(tempSmaliPath)) {
-                    saveSmaliCodeToFile(smaliEditor.getText().toString(), tempSmaliPath, new FileSaveCallback() {
-                        @Override
-                        public void onFileSaved(String filePath) {
-                            isFileCreated = "true";
-                            showSmaliNavigation(filePath, title, smaliEditor.getCursor().getLeftLine());
-                        }
-                    });
-                } else {
-                    showSmaliNavigation(tempSmaliPath, title, smaliEditor.getCursor().getLeftLine());
-                }
+                // Always save to ensure real-time data in navigation
+                saveSmaliCodeToFile(smaliEditor.getText().toString(), tempSmaliPath, new FileSaveCallback() {
+                    @Override
+                    public void onFileSaved(String filePath) {
+                        isFileCreated = "true";
+                        showSmaliNavigation(filePath, title, smaliEditor.getCursor().getLeftLine());
+                    }
+                });
             } catch (Exception e) {
                 Notify_MT.Notify(requireContext(), requireActivity().getString(R.string.error), e.toString(), requireActivity().getString(R.string.close));
             }
         }
     }
-    
+
 
     private void saveSmaliCodeToFile(String content, String filePath, FileSaveCallback callback) throws Exception {
         BufferedWriter writer = new BufferedWriter(new FileWriter(filePath));
@@ -937,41 +934,4 @@ public class EditorFragment extends Fragment implements SmaliMethodFieldListFrag
         }
     }
 
-    // get the text from outer qutoes which help for slecting the strings in the smali code
-    public static int[] getOuterQuotePositions(String input) {
-        int startQuote = -1;
-        int endQuote = -1;
-        boolean insideString = false;
-        boolean escapeNext = false;
-        for (int i = 0; i < input.length(); i++) {
-            char currentChar = input.charAt(i);
-            if (currentChar == '\\') {
-                escapeNext = true;
-            } else if (currentChar == '"' && !escapeNext) {
-                if (!insideString) {
-                    startQuote = i;
-                    insideString = true;
-                } else {
-                    endQuote = i;
-                    break;
-                }
-            } else {
-                escapeNext = false;
-            }
-        }
-        return new int[]{startQuote, endQuote};
-    }
-
-    // smali class name to only slash
-    public static String smali2OnlySlash(String smaliName) {
-        if (smaliName.startsWith("L") && smaliName.endsWith(";")) {
-            return smaliName.substring(1, smaliName.length() - 1);
-        }
-        return smaliName.replace('.', '/');
-    }
-
-    public static String extractSubstringAfterLastSlash(String str) {
-        int lastSlashIndex = str.lastIndexOf('/');
-        return lastSlashIndex != -1 ? str.substring(lastSlashIndex + 1) : str;
-    }
 }

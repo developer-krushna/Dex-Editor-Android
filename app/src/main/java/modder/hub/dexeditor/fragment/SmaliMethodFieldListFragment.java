@@ -103,6 +103,8 @@ import modder.hub.dexeditor.smali.SmaliMethodInvokeParser;
 import modder.hub.dexeditor.utils.FileUtil;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
+import modder.hub.dexeditor.utils.SmaliHelper;
+import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
@@ -138,21 +140,20 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private boolean isFirstLoad = true;
 
     public static String extractSubstringAfterLastSlash(String str) {
-        int lastSlashIndex = str.lastIndexOf('/');
-        return lastSlashIndex != -1 ? str.substring(lastSlashIndex + 1, str.length() - 1) : str;
+        return SmaliHelper.extractSimpleName(str);
     }
 
     // Update the UI with the smali file path, class name, editor line number, and dex version
     public void updateUi(String smaliFilePath, String className, int editorLineNumber, int dexVersion) {
-        if (this.smaliFilePath != null && !this.smaliFilePath.equals(smaliFilePath)) {
-            this.isFirstLoad = true;
-        }
         this.smaliFilePath = smaliFilePath;
         this.className = className;
         this.editorLineNumber = editorLineNumber;
         this.dexVersion = dexVersion;
-        if (isAdded() && isFirstLoad) {
-            initializeLogic();
+        this.isFirstLoad = true; // Always mark as first load to trigger data refresh from file
+
+        if (isAdded()) {
+            // Refresh data if already showing
+            new LoadDataRunnable().run();
         }
     }
 
@@ -324,12 +325,6 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         saveCurrentState(); // Save state when dialog is dismissed
     }
 
-    public void copiedToClipboard(String text) {
-        ClipboardManager clipboard = (ClipboardManager) requireContext().getSystemService(FragmentActivity.CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(ClipData.newPlainText("clipboard", text));
-        SketchwareUtil.showMessage(getActivity(), "Text has been copied to the clipboard");
-    }
-
     @SuppressLint("NotifyDataSetChanged")
     public void performSearch(final String _charSeq) {
         try {
@@ -471,6 +466,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private class LoadDataRunnable implements Runnable {
         @Override
         public void run() {
+            saveCurrentState(); // Save current scroll position before reloading data
             new LoadDataTask().execute();
         }
     }
@@ -724,7 +720,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                 holder.indexNameTextView.setBackground(createHolderBackground(Color.parseColor("#3860AF")));
                 holder.indexNameTextView.setText("C");
                 fullClassName = methodOrFieldName;
-                holder.methodNameTextView.setText(extractSubstringAfterLastSlash(methodOrFieldName));
+                holder.methodNameTextView.setText(SmaliHelper.extractSimpleName(methodOrFieldName));
                 holder.returnTypeTextView.setText(methodOrFieldName);
 
                 if (editorLineNumber == ((int) Math.floor(Double.parseDouble(startLineNumber)))) {
@@ -802,11 +798,11 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         public boolean onMenuItemClick(MenuItem menuItem) {
                             switch (menuItem.getItemId()) {
                                 case 1:  // Copy class signature
-                                    copiedToClipboard(methodOrFieldName);
+                                    UIHelper.copyToClipboard(requireContext(), methodOrFieldName);
                                     return true;
 
                                 case 2:  // Copy subclass signature
-                                    copiedToClipboard(Objects.requireNonNull(methodOrFieldInfo.get(position).get("SuperClass")).toString());
+                                    UIHelper.copyToClipboard(requireContext(), Objects.requireNonNull(methodOrFieldInfo.get(position).get("SuperClass")).toString());
                                     return true;
 
                                 case 3:  // Copy field signature
@@ -816,11 +812,11 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                                     if (spaceIndex != -1) {
                                         fieldSignature = fieldSignature.substring(0, spaceIndex);
                                     }
-                                    copiedToClipboard(fieldSignature);
+                                    UIHelper.copyToClipboard(requireContext(), fieldSignature);
                                     return true;
 
                                 case 4:  // Copy method signature
-                                    copiedToClipboard(fullClassName + smaliCallSyntax + methodOrFieldName);
+                                    UIHelper.copyToClipboard(requireContext(), fullClassName + smaliCallSyntax + methodOrFieldName);
                                     return true;
 
                                 case 5:  // Copy method code
@@ -830,13 +826,13 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                                             new String[]{Objects.requireNonNull(methodOrFieldInfo.get(position).get("MethodOrFieldName")).toString()},
                                             false
                                     );
-                                    copiedToClipboard(smaliMethodBody.parseClassInSmali());
+                                    UIHelper.copyToClipboard(requireContext(), smaliMethodBody.parseClassInSmali());
                                     return true;
 
                                 case 6:  // Copy method invoke code
                                     // Generate and copy smali invoke instruction
                                     SmaliMethodInvokeParser parser = new SmaliMethodInvokeParser(fullClassName);
-                                    copiedToClipboard(parser.generateInvokeCode(
+                                    UIHelper.copyToClipboard(requireContext(), parser.generateInvokeCode(
                                             Objects.requireNonNull(item.get("FullMethodOrField")).toString(),
                                             "v0"  // Using register v0
                                     ));
@@ -853,13 +849,13 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                                 case 9:  // Copy field get code
                                     // Generate and copy smali get instruction for field
                                     SmaliFieldAccessParser parser2 = new SmaliFieldAccessParser(fullClassName);
-                                    copiedToClipboard(parser2.generateGetCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
+                                    UIHelper.copyToClipboard(requireContext(), parser2.generateGetCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
                                     return true;
 
                                 case 10:  // Copy field put code
                                     // Generate and copy smali put instruction for field
                                     SmaliFieldAccessParser parser3 = new SmaliFieldAccessParser(fullClassName);
-                                    copiedToClipboard(parser3.generatePutCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
+                                    UIHelper.copyToClipboard(requireContext(), parser3.generatePutCode(Objects.requireNonNull(item.get("FullMethodOrField")).toString()));
                                     return true;
 
                                 case 11:  // AI Explanation
@@ -1089,7 +1085,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         @Override
                         public boolean onMenuItemClick(MenuItem item) {
                             if (item.getItemId() == 1) {
-                                copiedToClipboard(stringName);
+                                UIHelper.copyToClipboard(requireContext(), stringName);
                                 return true;
                             }
                             return false;
