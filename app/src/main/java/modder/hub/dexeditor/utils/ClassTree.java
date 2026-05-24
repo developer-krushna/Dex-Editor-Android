@@ -188,6 +188,8 @@ public class ClassTree {
         dexFiles = new ArrayList<>();
         classDefList.clear();
         typeToDexMap.clear();
+        if (classMap == null) classMap = new HashMap<>();
+        else classMap.clear();
 
         for (int i = 0; i < paths.size(); i++) {
             String path = paths.get(i);
@@ -197,21 +199,25 @@ public class ClassTree {
             DexBackedDexFile file = DexBackedDexFile.fromInputStream(Opcodes.forDexVersion(verifyDexHeader), new ByteArrayInputStream(read));
 
             dexFiles.add(file);
-            classDefList.addAll(file.getClasses());
-
+            
             List<String> classNames = new ArrayList<>();
             String fileName = new File(path).getName();
             for (ClassDef classDef : file.getClasses()) {
+                classDefList.add(classDef);
                 String type = classDef.getType();
-                classNames.add(type);
                 typeToDexMap.put(type, fileName);
+                
+                String typeName = type.substring(1, type.length() - 1);
+                if (!isClassDeleted(typeName)) {
+                    classMap.put(typeName, classDef);
+                }
+                classNames.add(type);
             }
-
             dexClassMap.put(fileName, classNames);
         }
 
         saveAllClassesJson(); // save all classes as json
-        initClassMap();
+        // initClassMap() is now integrated into the loop above
     }
 
     // save all classes during loading of initial dexes
@@ -221,7 +227,7 @@ public class ClassTree {
             file.delete();
         }
 
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Gson gson = new Gson(); // No pretty printing for speed
         String json = gson.toJson(dexClassMap);
         FileWriter writer = new FileWriter(ALL_CLASSES_JSON);
         writer.write(json);
@@ -408,9 +414,13 @@ public class ClassTree {
         return getSmaliByType(classDef);
     }
 
-    private String findDexFileNameForClass(ClassDef classDef) {
+    public String findDexFileNameForClass(ClassDef classDef) {
         String fileName = typeToDexMap.get(classDef.getType());
         return fileName != null ? fileName : "unknown.dex";
+    }
+
+    public Map<String, String> getTypeToDexMap() {
+        return typeToDexMap;
     }
 
     private void recordEditedClass(String type) {
