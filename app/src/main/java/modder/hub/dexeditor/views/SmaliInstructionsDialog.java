@@ -1,6 +1,6 @@
 
 /*
-* Dex-Editor-Android an Advanced Dex Editor for Android 
+* Dex-Editor-Android an Advanced Dex Editor for Android
 * Copyright 2024-2025, developer-krushna
 *
 * Redistribution and use in source and binary forms, with or without
@@ -78,58 +78,58 @@ Code fixed/enhancement/some hidden ideas/comments by ChatGPT
 
 
 public class SmaliInstructionsDialog extends Dialog {
-	
+
 	private Context context;
 	private String assetFileName;
 	private String currentQuery = "";
 	private InstructionsAdapter adapter;
 	private List<InstructionItem> originalItems = new ArrayList<>();
-	
+
 	public SmaliInstructionsDialog(@NonNull Context context, String assetFileName) {
 		this(context, assetFileName, "");
 	}
-	
+
 	public SmaliInstructionsDialog(@NonNull Context context, String assetFileName, String initialQuery) {
 		super(context);
 		this.context = context;
 		this.assetFileName = assetFileName;
 		this.currentQuery = initialQuery != null ? initialQuery : "";
 	}
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.dialog_instructions);
-		
+
 		Window window = getWindow();
 		if (window != null) {
 			window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
 		}
-		
+
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.inflateMenu(R.menu.menu_search);
 		toolbar.setTitle("Smali Instructions");
 		toolbar.setNavigationIcon(null);
-		
+
 		MenuItem searchItem = toolbar.getMenu().findItem(R.id.search);
 		SearchView searchView = (SearchView) searchItem.getActionView();
 		searchView.setMaxWidth(Integer.MAX_VALUE);
 		searchView.setQueryHint("");
-		
+
 		if (!TextUtils.isEmpty(currentQuery)) {
 			searchView.setIconified(false);
 			searchItem.expandActionView();
 			searchView.setQuery(currentQuery, false);
 			searchView.clearFocus();
 		}
-		
+
 		searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 			@Override
 			public boolean onQueryTextSubmit(String query) {
 				return false;
 			}
-			
+
 			@Override
 			public boolean onQueryTextChange(String newText) {
 				currentQuery = newText;
@@ -137,20 +137,20 @@ public class SmaliInstructionsDialog extends Dialog {
 				return true;
 			}
 		});
-		
+
 		String instructionsText = loadFromAssets();
 		originalItems = parseInstructions(instructionsText);
-		
+
 		RecyclerView recyclerView = findViewById(R.id.instructions_recycler);
 		new FastScrollerBuilder(recyclerView).build();
 		recyclerView.setLayoutManager(new LinearLayoutManager(context));
 		adapter = new InstructionsAdapter(originalItems);
 		recyclerView.setAdapter(adapter);
-		
+
 		if (!TextUtils.isEmpty(currentQuery)) {
 			filterInstructions(currentQuery);
 		}
-		
+
 		Button positiveButton = findViewById(R.id.positive_button);
 		positiveButton.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -159,7 +159,7 @@ public class SmaliInstructionsDialog extends Dialog {
 			}
 		});
 	}
-	
+
 	private void filterInstructions(String query) {
 		List<InstructionItem> filteredList = new ArrayList<>();
 		if (TextUtils.isEmpty(query)) {
@@ -170,13 +170,13 @@ public class SmaliInstructionsDialog extends Dialog {
 			for (InstructionItem originalItem : originalItems) {
 				boolean headerMatches = originalItem.getHeader().toLowerCase().contains(searchQuery);
 				List<String> matchingContent = new ArrayList<>();
-				
+
 				for (String line : originalItem.getContent()) {
 					if (line.toLowerCase().contains(searchQuery)) {
 						matchingContent.add(line);
 					}
 				}
-				
+
 				if (headerMatches || !matchingContent.isEmpty()) {
 					filteredList.add(new InstructionItem(
 					originalItem.getHeader(),
@@ -187,7 +187,7 @@ public class SmaliInstructionsDialog extends Dialog {
 		}
 		adapter.updateItems(filteredList, query);
 	}
-	
+
 	private String loadFromAssets() {
 		StringBuilder stringBuilder = new StringBuilder();
 		AssetManager assetManager = context.getAssets();
@@ -204,87 +204,87 @@ public class SmaliInstructionsDialog extends Dialog {
 		}
 		return stringBuilder.toString();
 	}
-	
+
 	private List<InstructionItem> parseInstructions(String text) {
 		List<InstructionItem> items = new ArrayList<>();
 		String[] sections = text.split("\n\n");
-		
+
 		for (String section : sections) {
 			if (section.trim().isEmpty()) continue;
-			
+
 			String[] lines = section.split("\n");
 			if (lines.length > 0) {
 				String header = lines[0];
 				List<String> content = new ArrayList<>();
-				
+
 				for (int i = 1; i < lines.length; i++) {
 					content.add(lines[i]);
 				}
-				
+
 				items.add(new InstructionItem(header, content));
 			}
 		}
 		return items;
 	}
-	
+
 	private static class InstructionItem {
 		private String header;
 		private List<String> content;
-		
+
 		public InstructionItem(String header, List<String> content) {
 			this.header = header;
 			this.content = content;
 		}
-		
+
 		public String getHeader() {
 			return header;
 		}
-		
+
 		public List<String> getContent() {
 			return content;
 		}
 	}
-	
+
 	private class InstructionsAdapter extends RecyclerView.Adapter<InstructionsAdapter.ViewHolder> {
 		private List<InstructionItem> items;
 		private String currentHighlightQuery = "";
-		
+
 		public InstructionsAdapter(List<InstructionItem> items) {
 			this.items = items;
 		}
-		
+
 		public void updateItems(List<InstructionItem> newItems, String query) {
 			this.items = newItems;
 			this.currentHighlightQuery = query;
 			notifyDataSetChanged();
 		}
-		
+
 		@NonNull
 		@Override
 		public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 			View view = LayoutInflater.from(parent.getContext())
 			.inflate(R.layout.item_instruction, parent, false);
-			
+
 			return new ViewHolder(view);
 		}
-		
+
 		@Override
 		public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 			InstructionItem item = items.get(position);
-			
+
 			if (!TextUtils.isEmpty(currentHighlightQuery)) {
 				holder.headerText.setText(getHighlightedText(item.getHeader(), currentHighlightQuery));
-				
+
 				StringBuilder contentBuilder = new StringBuilder();
 				for (String line : item.getContent()) {
 					contentBuilder.append(line).append("\n");
 				}
 				holder.contentText.setText(getHighlightedText(
-				contentBuilder.toString().trim(), 
+				contentBuilder.toString().trim(),
 				currentHighlightQuery));
 			} else {
 				holder.headerText.setText(item.getHeader());
-				
+
 				StringBuilder contentBuilder = new StringBuilder();
 				for (String line : item.getContent()) {
 					contentBuilder.append(line).append("\n");
@@ -292,40 +292,40 @@ public class SmaliInstructionsDialog extends Dialog {
 				holder.contentText.setText(contentBuilder.toString().trim());
 			}
 		}
-		
+
 		private SpannableString getHighlightedText(String text, String query) {
 			SpannableString spannable = new SpannableString(text);
 			if (TextUtils.isEmpty(query)) {
 				return spannable;
 			}
-			
+
 			String textLower = text.toLowerCase();
 			String queryLower = query.toLowerCase();
 			int index = textLower.indexOf(queryLower);
-			
+
 			while (index >= 0) {
-				spannable.setSpan(new StyleSpan(Typeface.BOLD), 
+				spannable.setSpan(new StyleSpan(Typeface.BOLD),
 				index, index + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 				index = textLower.indexOf(queryLower, index + query.length());
 			}
-			
+
 			return spannable;
 		}
-		
+
 		@Override
 		public int getItemCount() {
 			return items.size();
 		}
-		
+
 		class ViewHolder extends RecyclerView.ViewHolder {
 			TextView headerText;
 			TextView contentText;
-			
+
 			public ViewHolder(View view) {
 				super(view);
 				headerText = view.findViewById(R.id.header_text);
 				contentText = view.findViewById(R.id.content_text);
-				
+
 				view.setClickable(true);
 				view.setFocusable(true);
 			}
