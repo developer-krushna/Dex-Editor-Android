@@ -102,67 +102,75 @@ import modder.hub.dexeditor.fragment.SearchFragment;
 import modder.hub.dexeditor.fragment.SmaliMethodFieldListFragment;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.utils.ClassTree;
+import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.utils.SmaliInstructionHelper;
+import modder.hub.dexeditor.utils.SmaliHelper;
+import modder.hub.dexeditor.utils.TreeHelper;
+import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertCircularProgress;
 import modder.hub.dexeditor.views.AlertProgress;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 
-/*
- * Author : @developer-krushna
- * suport batch class editing
- * ideas are clearly copied from MT Manageer
- * code fix , optize and coments are made by AI
+/**
+ * DexEditorActivity: The main entry point for the DEX editor.
+ * Re-sequenced and refactored for better clarity and utility.
+ * Author: @developer-krushna
  */
-
 public class DexEditorActivity extends AppCompatActivity {
+
+    // --- Constants and Static State ---
     private static final long DOUBLE_PRESS_INTERVAL = 2000;
     public static ClassTree classTree;
     public static boolean isChanged;
     public static boolean isSaved;
+    public static List<EditorTab> tabs = new ArrayList<>();
+    private static int currentTabIndex = -1;
 
-    // Static fields for SmaliMethodListFragment state
+    // Legacy static fields for SmaliMethodFieldListFragment state
     public static SmaliMethodFieldListFragment smaliMethodsFieldsStringsFragment = null;
     public static android.os.Parcelable methodRecyclerViewState = null;
     public static android.os.Parcelable stringsRecyclerViewState = null;
     public static boolean wasStringsVisible = false;
     public static String lastSmaliFilePath = "";
-    public static List<EditorTab> tabs = new ArrayList<>();
-    private static int currentTabIndex = -1;
-    public List<TreeNode> searchNodes = new ArrayList<>();
-    public TabsAdapter tabsAdapter;
+
+    // --- Member Fields ---
     public int dexVersion;
-    List<String> dexPaths;
-    private AlertCircularProgress coreProgressDialog;
-    private LinearLayout fabBackground;
-    private FloatingActionButton fabDelete;
-    private AlertProgress progressDialog;
+    private List<String> dexPaths;
+    public List<TreeNode> searchNodes = new ArrayList<>();
     private List<TreeNode> treeRoots = new ArrayList<>();
     private final List<TreeNode> historyNodes = new ArrayList<>();
     private List<TreeNode> modifiedNodes = new ArrayList<>();
     private final List<String> stringList = new ArrayList<>();
+    private final java.util.Stack<Integer> tabNavigationHistory = new java.util.Stack<>();
+    private final ClassTree.CompilationOptions sessionOptions = new ClassTree.CompilationOptions();
+    private long lastBackPressTime = 0;
+    private SharedPreferences dexPref;
+    private Menu optionsMenu;
 
-    // 0: Explorer, 1: History, 2: Search, 3: Strings
-    // Explorer tabs fields
-    private TabLayout explorerTabLayout;
-    private ViewPager2 explorerViewPager;
-    private ExplorerTabAdapter explorerTabAdapter;
-    // Multi-tab editor fields
+    // --- UI Components ---
     private DrawerLayout drawerLayout;
+    private Toolbar toolbar;
+    private ActionBarDrawerToggle drawerToggle;
     private ViewPager2 viewPager;
     private TabAdapter tabAdapter;
     private RecyclerView tabsRecyclerView;
+    public TabsAdapter tabsAdapter;
     private View classListContainer;
-    private Toolbar toolbar;
-    private ActionBarDrawerToggle drawerToggle;
-    private final java.util.Stack<Integer> tabNavigationHistory = new java.util.Stack<>();
-    private SharedPreferences dexPref;
-    private Menu optionsMenu;
-    private final ClassTree.CompilationOptions sessionOptions = new ClassTree.CompilationOptions();
-    private long lastBackPressTime = 0;
+    private TabLayout explorerTabLayout;
+    private ViewPager2 explorerViewPager;
+    private ExplorerTabAdapter explorerTabAdapter;
+    private FloatingActionButton fabDelete;
+    private LinearLayout fabBackground;
+    private AlertCircularProgress coreProgressDialog;
+    private AlertProgress progressDialog;
+
+    // ==========================================
+    // Lifecycle Methods
+    // ==========================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -186,7 +194,6 @@ public class DexEditorActivity extends AppCompatActivity {
 
         initialize(savedInstanceState);
 
-        // Check for storage permissions
         if (ContextCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE") == -1) {
             requestPermissionLauncher.launch("android.permission.READ_EXTERNAL_STORAGE");
         } else {
@@ -194,13 +201,69 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
-    // Initialize UI components
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        EditorFragment.clearCache();
+    }
+
+    @SuppressLint("MissingSuperCall")
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return;
+        }
+
+        if (isSelectionModeActive()) {
+            cancelSelectionMode();
+            return;
+        }
+
+        if (viewPager.getVisibility() == View.VISIBLE) {
+            if (!tabNavigationHistory.isEmpty()) {
+                int lastIndex = tabNavigationHistory.pop();
+                if (lastIndex >= 0 && lastIndex < tabs.size()) {
+                    viewPager.setCurrentItem(lastIndex, true);
+                    return;
+                }
+            }
+            hideEditor();
+            return;
+        }
+
+        boolean anyModified = false;
+        for (EditorTab tab : tabs) {
+            if (tab.isModified) {
+                anyModified = true;
+                break;
+            }
+        }
+
+        if (anyModified || isChanged || isCompilationOptionsActive()) {
+            showExitConfirmation();
+            return;
+        }
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
+            exitActivity();
+        } else {
+            lastBackPressTime = currentTime;
+            SketchwareUtil.showMessage(this, "Press back again to exit");
+        }
+    }
+
+
+    // ==========================================
+    // Initialization & UI Setup
+    // ==========================================
+
     private void initialize(Bundle savedInstanceState) {
         drawerLayout = findViewById(R.id.drawer_layout);
         classListContainer = findViewById(R.id.class_list_container);
         viewPager = findViewById(R.id.view_pager);
         tabsRecyclerView = findViewById(R.id.tabs_recycler_view);
-
         toolbar = findViewById(R.id._toolbar);
         setSupportActionBar(toolbar);
 
@@ -218,14 +281,21 @@ public class DexEditorActivity extends AppCompatActivity {
 
         tabAdapter = new TabAdapter(this);
         viewPager.setAdapter(tabAdapter);
-        viewPager.setOffscreenPageLimit(1); // Keep one adjacent page on each side to avoid flickering
+        viewPager.setOffscreenPageLimit(1);
         viewPager.setUserInputEnabled(false);
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @SuppressLint("NotifyDataSetChanged")
             @Override
             public void onPageSelected(int position) {
+                int previousIndex = currentTabIndex;
                 currentTabIndex = position;
-                tabsAdapter.notifyDataSetChanged();
+
+                // Targeted updates to reduce lag
+                if (previousIndex != -1) {
+                    tabsAdapter.notifyItemChanged(previousIndex + 1);
+                }
+                tabsAdapter.notifyItemChanged(position + 1);
+                tabsAdapter.notifyItemChanged(0); // Update Home item selection state
+
                 updateToolbar();
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     tabsRecyclerView.scrollToPosition(position + 1);
@@ -242,36 +312,52 @@ public class DexEditorActivity extends AppCompatActivity {
         fabDelete.setOnClickListener(new DeleteButtonClickListener());
 
         initializeExplorerTabs();
-
+        initializeFab();
         dexPref = getSharedPreferences("dexPref", Activity.MODE_PRIVATE);
     }
 
     private void initializeExplorerTabs() {
         explorerTabLayout = findViewById(R.id.explorer_tab_layout);
         explorerViewPager = findViewById(R.id.explorer_view_pager);
-
         explorerTabAdapter = new ExplorerTabAdapter(this);
         explorerViewPager.setAdapter(explorerTabAdapter);
 
         new TabLayoutMediator(explorerTabLayout, explorerViewPager, new TabLayoutMediator.TabConfigurationStrategy() {
             @Override
             public void onConfigureTab(@NonNull TabLayout.Tab tab, int position) {
-                switch (position) {
-                    case 0:
-                        tab.setText("Explorer");
-                        break;
-                    case 1:
-                        tab.setText("History");
-                        break;
-                    case 2:
-                        tab.setText("Search");
-                        break;
-                    case 3:
-                        tab.setText("Strings");
-                        break;
-                }
+                String[] titles = {"Explorer", "History", "Search", "Strings"};
+                tab.setText(titles[position]);
             }
         }).attach();
+
+        explorerTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                // Default behavior handled by ViewPager2
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                int position = tab.getPosition();
+                Fragment fragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + position));
+                if (fragment != null && fragment.getView() != null) {
+                    RecyclerView rv = null;
+                    if (fragment instanceof ExplorerPageFragment) {
+                        rv = ((ExplorerPageFragment) fragment).rv;
+                    } else if (fragment instanceof SearchFragment) {
+                        rv = fragment.getView().findViewById(R.id.search_results_rv);
+                    }
+
+                    if (rv != null) {
+                        rv.scrollToPosition(0);
+                    }
+                }
+            }
+        });
 
         explorerViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
@@ -282,36 +368,105 @@ public class DexEditorActivity extends AppCompatActivity {
             }
         });
     }
-    // load strings from dexes
-    //TO-DO ; string search from list strings
+
+    private void initializeLogic() {
+        tabs.clear();
+        currentTabIndex = -1;
+        isChanged = false;
+        isSaved = false;
+
+        EditorPositionManager.getInstance(this).clear();
+
+        File[] cacheFiles = getCacheDir().listFiles();
+        if (cacheFiles != null) {
+            for (File file : cacheFiles) {
+                if (file.isDirectory() && file.getName().startsWith("dex_editor_")) {
+                    deleteRecursive(file);
+                }
+            }
+        }
+
+        dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
+        setTitle("Dex Editor Plus");
+        showProcessingProgress(true);
+        fabDelete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
+        fabDelete.hide();
+
+        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new java.util.Random().nextInt(9000) + 1000);
+        File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
+
+        if (dexPaths != null && !dexPaths.isEmpty()) {
+            new LoadDexThread(dexPaths, cacheDir.getAbsolutePath()).start();
+        } else {
+            showErrorDialog("No DEX files provided");
+            finish();
+        }
+    }
+
     private void loadStrings() {
+        if (classTree == null) return;
         showProcessingProgress(true);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    final List<String> allStrings = classTree.getAllStrings();
+                    final List<String> strings = classTree.getAllStrings();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             stringList.clear();
-                            stringList.addAll(allStrings);
-                            refreshExplorerPage(3); // strings tab
+                            stringList.addAll(strings);
+                            refreshExplorerPage(3);
                             showProcessingProgress(false);
                         }
                     });
-                } catch (final Exception e) {
+                } catch (Exception e) {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             showProcessingProgress(false);
-                            Notify_MT.Notify(DexEditorActivity.this, "Error", e.getMessage(), "Close");
+                            showErrorDialog("Failed to load strings: " + e.getMessage());
                         }
                     });
                 }
             }
         }).start();
     }
+
+    private void setupTabsTouchHelper() {
+        androidx.recyclerview.widget.ItemTouchHelper.Callback callback = new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
+                androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int fromPos = viewHolder.getBindingAdapterPosition();
+                int toPos = target.getBindingAdapterPosition();
+                if (fromPos == 0 || toPos == 0) return false;
+
+                int fromTab = fromPos - 1;
+                int toTab = toPos - 1;
+
+                EditorTab movedTab = tabs.remove(fromTab);
+                tabs.add(toTab, movedTab);
+
+                if (currentTabIndex == fromTab) currentTabIndex = toTab;
+                else if (fromTab < currentTabIndex && toTab >= currentTabIndex) currentTabIndex--;
+                else if (fromTab > currentTabIndex && toTab <= currentTabIndex) currentTabIndex++;
+
+                tabAdapter.notifyItemMoved(fromTab, toTab);
+                tabsAdapter.notifyItemMoved(fromPos, toPos);
+                return true;
+            }
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {}
+            @Override
+            public int getSwipeDirs(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) { return 0; }
+        };
+        new androidx.recyclerview.widget.ItemTouchHelper(callback).attachToRecyclerView(tabsRecyclerView);
+    }
+
+    // ==========================================
+    // Toolbar & Menu Management
+    // ==========================================
 
     private void updateToolbar() {
         if (getSupportActionBar() == null) return;
@@ -330,33 +485,20 @@ public class DexEditorActivity extends AppCompatActivity {
         invalidateOptionsMenu();
     }
 
-    // Update toolabr subtitle according to the opened tree folder
     public void setToolbarSubtitle(String subtitle) {
         if (getSupportActionBar() == null || viewPager.getVisibility() == View.VISIBLE) return;
-        if (subtitle == null || subtitle.isEmpty()) {
-            getSupportActionBar().setSubtitle("Temporary project");
-        } else {
-            getSupportActionBar().setSubtitle(subtitle);
-        }
+        getSupportActionBar().setSubtitle((subtitle == null || subtitle.isEmpty()) ? "Temporary project" : subtitle.replace("/", "."));
     }
 
     public void toggleDrawer() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START);
-        } else {
-            drawerLayout.openDrawer(GravityCompat.START);
-        }
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) drawerLayout.closeDrawer(GravityCompat.START);
+        else drawerLayout.openDrawer(GravityCompat.START);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         this.optionsMenu = menu;
-        // updating the menu items according the viewpager
-        if (viewPager.getVisibility() == View.VISIBLE) {
-            getMenuInflater().inflate(R.menu.editor_menu, menu);
-        } else {
-            getMenuInflater().inflate(R.menu.dex_editor_main_menu, menu);
-        }
+        getMenuInflater().inflate(viewPager.getVisibility() == View.VISIBLE ? R.menu.editor_menu : R.menu.dex_editor_main_menu, menu);
         return true;
     }
 
@@ -372,9 +514,7 @@ public class DexEditorActivity extends AppCompatActivity {
             MenuItem saveItem = menu.findItem(R.id.save);
             saveItem.setVisible(isSmali);
             saveItem.setEnabled(tab.isModified);
-            if (saveItem.getIcon() != null) {
-                saveItem.getIcon().setAlpha(tab.isModified ? 255 : 100);
-            }
+            if (saveItem.getIcon() != null) saveItem.getIcon().setAlpha(tab.isModified ? 255 : 100);
 
             menu.findItem(R.id.navigation).setVisible(isSmali);
             menu.findItem(R.id.edit_menu).setVisible(isSmali);
@@ -447,31 +587,31 @@ public class DexEditorActivity extends AppCompatActivity {
                 editorFragment.showMethodFieldList();
                 return true;
             } else if (id == R.id.copy_line) {
-                copyLine(editor);
+                EditorHelper.copyLine(editor);
                 return true;
             } else if (id == R.id.cut_line) {
-                cutLine(editor);
+                EditorHelper.cutLine(editor);
                 return true;
             } else if (id == R.id.delete_line) {
-                deleteLine(editor);
+                EditorHelper.deleteLine(editor);
                 return true;
             } else if (id == R.id.empty_line) {
-                emptyLine(editor);
+                EditorHelper.emptyLine(editor);
                 return true;
             } else if (id == R.id.duplicate_line) {
-                duplicateLine(editor);
+                EditorHelper.duplicateLine(editor);
                 return true;
             } else if (id == R.id.convert_uppercase) {
-                convertSelectedTextCase(editor, true);
+                EditorHelper.convertSelectedTextCase(editor, true);
                 return true;
             } else if (id == R.id.convert_lowercase) {
-                convertSelectedTextCase(editor, false);
+                EditorHelper.convertSelectedTextCase(editor, false);
                 return true;
             } else if (id == R.id.increase_indent) {
-                indent(editor, true);
+                EditorHelper.indent(editor, true);
                 return true;
             } else if (id == R.id.decrease_indent) {
-                indent(editor, false);
+                EditorHelper.indent(editor, false);
                 return true;
             } else if (id == R.id.toggle_comment) {
                 toggleComment(editorFragment);
@@ -607,7 +747,7 @@ public class DexEditorActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             pd.dismiss();
-                            addTab(className, EditorFragment.extractSubstringAfterLastSlash(className) + ".java", java, 1); // adding the java item in the recent opened classes list
+                            addTab(className, SmaliHelper.extractSimpleName(className) + ".java", java, 1); // adding the java item in the recent opened classes list
                         }
                     });
                 } catch (final Exception e) {
@@ -623,90 +763,6 @@ public class DexEditorActivity extends AppCompatActivity {
         }).start();
     }
 
-    // line copy
-    private void copyLine(CodeEditor editor) {
-        int line = editor.getCursor().getLeftLine();
-        String text = editor.getText().getLineString(line);
-        copiedToClipboard(text);
-    }
-
-    // cut line
-    private void cutLine(CodeEditor editor) {
-        int line = editor.getCursor().getLeftLine();
-        String text = editor.getText().getLineString(line);
-        copiedToClipboard(text);
-        editor.getText().delete(line, 0, line, editor.getText().getColumnCount(line));
-        if (line < editor.getText().getLineCount() - 1) {
-            editor.getText().delete(line, editor.getText().getColumnCount(line), line + 1, 0);
-        }
-    }
-
-    // delete line
-    private void deleteLine(CodeEditor editor) {
-        int line = editor.getCursor().getLeftLine();
-        editor.getText().delete(line, 0, line, editor.getText().getColumnCount(line));
-        if (line < editor.getText().getLineCount() - 1) {
-            editor.getText().delete(line, editor.getText().getColumnCount(line), line + 1, 0);
-        }
-    }
-
-    // empty line
-    private void emptyLine(CodeEditor editor) {
-        int line = editor.getCursor().getLeftLine();
-        editor.getText().delete(line, 0, line, editor.getText().getColumnCount(line));
-    }
-
-    // duplicate line
-    private void duplicateLine(CodeEditor editor) {
-        int line = editor.getCursor().getLeftLine();
-        String text = editor.getText().getLineString(line);
-        editor.getText().insert(line, editor.getText().getColumnCount(line), "\n" + text);
-    }
-
-    // convert the selected text to upper or lower
-    private void convertSelectedTextCase(CodeEditor editor, boolean toUpper) {
-        if (editor.getCursor().isSelected()) {
-            int start = editor.getCursor().getLeft();
-            int end = editor.getCursor().getRight();
-            String selectedText = editor.getText().substring(start, end);
-            editor.getText().replace(start, end, toUpper ? selectedText.toUpperCase() : selectedText.toLowerCase());
-        }
-    }
-
-    // indention
-    private void indent(CodeEditor editor, boolean indent) {
-        if (editor.getCursor().isSelected()) {
-            int startLine = editor.getCursor().getLeftLine();
-            int endLine = editor.getCursor().getRightLine();
-            editor.getText().beginBatchEdit();
-            for (int i = startLine; i <= endLine; i++) {
-                if (indent) {
-                    editor.getText().insert(i, 0, "\t");
-                } else {
-                    String line = editor.getText().getLineString(i);
-                    if (line.startsWith("\t")) {
-                        editor.getText().delete(i, 0, i, 1);
-                    } else if (line.startsWith("    ")) {
-                        editor.getText().delete(i, 0, i, 4);
-                    }
-                }
-            }
-            editor.getText().endBatchEdit();
-        } else {
-            int line = editor.getCursor().getLeftLine();
-            if (indent) {
-                editor.getText().insert(line, 0, "\t");
-            } else {
-                String lineStr = editor.getText().getLineString(line);
-                if (lineStr.startsWith("\t")) {
-                    editor.getText().delete(line, 0, line, 1);
-                } else if (lineStr.startsWith("    ")) {
-                    editor.getText().delete(line, 0, line, 4);
-                }
-            }
-        }
-    }
-
     // smali toggle comment
     private void toggleComment(EditorFragment fragment) {
         try {
@@ -715,7 +771,6 @@ public class DexEditorActivity extends AppCompatActivity {
         } catch (Exception ignored) {
         }
     }
-
     // jump to line
     private void showJumpToLineDialog(EditorFragment fragment) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_jump_to_line, null);
@@ -764,26 +819,27 @@ public class DexEditorActivity extends AppCompatActivity {
             MenuItem undo = optionsMenu.findItem(R.id.undo);
             MenuItem redo = optionsMenu.findItem(R.id.redo);
             MenuItem save = optionsMenu.findItem(R.id.save);
-            if (save != null) {
-                boolean isModified = false;
-                for (EditorTab tab : tabs) {
-                    if (tab.className.equals(fragment.getClassName())) {
-                        isModified = tab.isModified;
-                        break;
-                    }
+
+            boolean isModified = false;
+            for (EditorTab tab : tabs) {
+                if (tab.className.equals(fragment.getClassName())) {
+                    isModified = tab.isModified;
+                    break;
                 }
-                save.setVisible(isModified);
             }
+
+            if (save != null) {
+                save.setEnabled(isModified);
+                if (save.getIcon() != null) {
+                    save.getIcon().setAlpha(isModified ? 255 : 100);
+                }
+            }
+
             if (undo != null) {
                 undo.setEnabled(fragment.getEditor().canUndo());
                 if (undo.getIcon() != null) {
                     androidx.core.graphics.drawable.DrawableCompat.setTint(undo.getIcon(), Color.WHITE);
                     undo.getIcon().setAlpha(undo.isEnabled() ? 255 : 100);
-                }
-                if(!fragment.getEditor().canUndo()){
-                    if (save != null) {
-                        save.setVisible(false);
-                    }
                 }
             }
             if (redo != null) {
@@ -793,7 +849,6 @@ public class DexEditorActivity extends AppCompatActivity {
                     redo.getIcon().setAlpha(redo.isEnabled() ? 255 : 100);
                 }
             }
-
         }
     }
 
@@ -879,7 +934,7 @@ public class DexEditorActivity extends AppCompatActivity {
             historyNodes.remove(existingNode);
             historyNodes.add(0, existingNode);
         } else {
-            historyNodes.add(0, new TreeNode(EditorFragment.extractSubstringAfterLastSlash(className), className, 0, false));
+            historyNodes.add(0, new TreeNode(SmaliHelper.extractSimpleName(className), className, 0, false));
         }
 
         refreshExplorerPage(1);
@@ -898,7 +953,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         // Add tab with null content, the fragment will handle the loading
-        addTab(className, EditorFragment.extractSubstringAfterLastSlash(className), null, 0);
+        addTab(className, SmaliHelper.extractSimpleName(className), null, 0);
     }
 
     // method reposnsible for opening the editor tab according to the search reasult , line number and class name
@@ -939,12 +994,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     public void copiedToClipboard(String text) {
-        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        android.content.ClipData clip = android.content.ClipData.newPlainText("copied_text", text);
-        if (clipboard != null) {
-            clipboard.setPrimaryClip(clip);
-            SketchwareUtil.showMessage(this, "Text has been copied to the clipboard");
-        }
+        UIHelper.copyToClipboard(this, text);
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -992,10 +1042,16 @@ public class DexEditorActivity extends AppCompatActivity {
 
     @SuppressLint("NotifyDataSetChanged")
     private void hideEditor() {
+        int oldIndex = currentTabIndex;
         viewPager.setVisibility(View.GONE);
         classListContainer.setVisibility(View.VISIBLE);
         updateToolbar();
-        tabsAdapter.notifyDataSetChanged();
+        
+        // Targeted updates for better performance
+        tabsAdapter.notifyItemChanged(0); // Update Home item selection
+        if (oldIndex != -1) {
+            tabsAdapter.notifyItemChanged(oldIndex + 1);
+        }
     }
 
     public EditorTab getTabForClassName(String className) {
@@ -1011,12 +1067,14 @@ public class DexEditorActivity extends AppCompatActivity {
                 EditorFragment fragment = getFragmentAtIndex(i);
                 boolean actuallyModified = true;
                 if (fragment != null && fragment.getEditor() != null) {
-                    actuallyModified = !fragment.getEditor().getText().toString().equals(tabs.get(i).content);
+                    String currentText = fragment.getEditor().getText().toString();
+                    String originalText = tabs.get(i).content;
+                    actuallyModified = originalText == null || !currentText.equals(originalText);
                 }
 
                 if (tabs.get(i).isModified != actuallyModified) {
                     tabs.get(i).isModified = actuallyModified;
-                    tabsAdapter.notifyItemChanged(i);
+                    tabsAdapter.notifyItemChanged(i + 1); // Fixed index: tabs start at position 1
                     invalidateOptionsMenu();
                 }
                 break;
@@ -1122,7 +1180,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
     public void goTo(String text, String currentClassName) {
         if (!text.contains(";->")) {
-            String targetClass = EditorFragment.smali2OnlySlash(text);
+            String targetClass = SmaliHelper.smali2OnlySlash(text);
             if (targetClass.equals(currentClassName)) {
                 SketchwareUtil.showMessage(this, " You are already in this class");
             } else if (classTree.classMap.get(targetClass) != null) {
@@ -1132,7 +1190,7 @@ public class DexEditorActivity extends AppCompatActivity {
             }
         } else {
             String[] split = text.split("->");
-            String className = EditorFragment.smali2OnlySlash(split[0]);
+            String className = SmaliHelper.smali2OnlySlash(split[0]);
             String methodName = split[1];
             if (className.equals(currentClassName)) {
                 EditorFragment fragment = getCurrentFragment();
@@ -1165,54 +1223,9 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     private String smali2OnlySlash(String smaliName) {
-        return EditorFragment.smali2OnlySlash(smaliName);
+        return SmaliHelper.smali2OnlySlash(smaliName);
     }
 
-    // Initialize logic after permissions are granted
-    private void initializeLogic() {
-        // Clear old session state from static fields
-        tabs.clear();
-        currentTabIndex = -1;
-        isChanged = false;
-        isSaved = false;
-
-        // Clear editor positions JSON
-        EditorPositionManager.getInstance(this).clear();
-
-        // Clean up old cache directories
-        File[] cacheFiles = getCacheDir().listFiles();
-        if (cacheFiles != null) {
-            for (File file : cacheFiles) {
-                if (file.isDirectory() && file.getName().startsWith("dex_editor_")) {
-                    deleteRecursive(file);
-                }
-            }
-        }
-
-        dexPaths = getIntent().getStringArrayListExtra("SelectedDexFiles");
-        setTitle("Dex Editor Plus");
-        showProcessingProgress(true);
-        initializeFab();
-        fabDelete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
-        fabDelete.hide();
-
-        // Create a unique cache directory for this session
-        String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new java.util.Random().nextInt(9000) + 1000);
-        File cacheDir = new File(getCacheDir(), "dex_editor_" + uniqueId);
-
-        if (dexPaths != null && !dexPaths.isEmpty()) {
-            new LoadDexThread(dexPaths, cacheDir.getAbsolutePath()).start();
-        } else {
-            showErrorDialog("No DEX files provided");
-            finish();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        EditorFragment.clearCache();
-    }
 
     private boolean isCompilationOptionsActive() {
         return sessionOptions.removeAllDebug || sessionOptions.removeDebugSource ||
@@ -1221,52 +1234,6 @@ public class DexEditorActivity extends AppCompatActivity {
                 !sessionOptions.dexVersion.equals("Keep the same");
     }
 
-    @SuppressLint("MissingSuperCall")
-    @Override
-    public void onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START);
-            return;
-        }
-
-        if (isSelectionModeActive()) {
-            cancelSelectionMode();
-            return;
-        }
-
-        if (viewPager.getVisibility() == View.VISIBLE) {
-            if (!tabNavigationHistory.isEmpty()) {
-                int lastIndex = tabNavigationHistory.pop();
-                if (lastIndex >= 0 && lastIndex < tabs.size()) {
-                    viewPager.setCurrentItem(lastIndex, true);
-                    return;
-                }
-            }
-            hideEditor();
-            return;
-        }
-
-        boolean anyModified = false;
-        for (EditorTab tab : tabs) {
-            if (tab.isModified) {
-                anyModified = true;
-                break;
-            }
-        }
-
-        if (anyModified || isChanged || isCompilationOptionsActive()) {
-            showExitConfirmation();
-            return;
-        }
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
-            exitActivity();
-        } else {
-            lastBackPressTime = currentTime;
-            SketchwareUtil.showMessage(this, "Press back again to exit");
-        }
-    }
 
     private void showExitConfirmation() {
         List<EditorTab> modifiedTabs = new ArrayList<>();
@@ -1544,47 +1511,6 @@ public class DexEditorActivity extends AppCompatActivity {
         closeTabWithPrompt(index);
     }
 
-    private void setupTabsTouchHelper() {
-        androidx.recyclerview.widget.ItemTouchHelper.Callback callback = new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
-                androidx.recyclerview.widget.ItemTouchHelper.UP | androidx.recyclerview.widget.ItemTouchHelper.DOWN,
-                0) {
-
-            @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                int fromPos = viewHolder.getBindingAdapterPosition();
-                int toPos = target.getBindingAdapterPosition();
-                if (fromPos == 0 || toPos == 0) return false;
-
-                int fromTab = fromPos - 1;
-                int toTab = toPos - 1;
-
-                EditorTab movedTab = tabs.remove(fromTab);
-                tabs.add(toTab, movedTab);
-
-                if (currentTabIndex == fromTab) {
-                    currentTabIndex = toTab;
-                } else if (fromTab < currentTabIndex && toTab >= currentTabIndex) {
-                    currentTabIndex--;
-                } else if (fromTab > currentTabIndex && toTab <= currentTabIndex) {
-                    currentTabIndex++;
-                }
-
-                tabAdapter.notifyItemMoved(fromTab, toTab);
-                tabsAdapter.notifyItemMoved(fromPos, toPos);
-                return true;
-            }
-
-            @Override
-            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-            }
-
-            @Override
-            public int getSwipeDirs(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
-                return 0;
-            }
-        };
-        new androidx.recyclerview.widget.ItemTouchHelper(callback).attachToRecyclerView(tabsRecyclerView);
-    }
 
     @SuppressLint("NotifyDataSetChanged")
     private void removeTab(int index) {
@@ -1734,9 +1660,6 @@ public class DexEditorActivity extends AppCompatActivity {
 
             switch (position) {
                 case 0:
-                    if (activity.treeRoots.isEmpty() && classTree != null) {
-                        activity.treeRoots = classTree.buildFullTree();
-                    }
                     rv.setAdapter(new TreeAdapter(getContext(), activity.treeRoots, new TreeAdapter.OnNodeClickListener() {
                         @Override
                         public void onNodeClick(TreeNode node) {
@@ -1760,9 +1683,6 @@ public class DexEditorActivity extends AppCompatActivity {
                     }, false));
                     break;
                 case 1:
-                    if (activity.modifiedNodes.isEmpty() && classTree != null) {
-                        activity.modifiedNodes = classTree.buildEditedFullTree();
-                    }
                     ConcatAdapter concatAdapter = new ConcatAdapter();
                     if (!activity.historyNodes.isEmpty()) {
                         concatAdapter.addAdapter(new HeaderAdapter("Recently"));
@@ -1894,10 +1814,16 @@ public class DexEditorActivity extends AppCompatActivity {
         public void run() {
             try {
                 classTree = new ClassTree(paths, cachePath);
+                // Pre-build trees in background to avoid UI lag
+                final List<TreeNode> roots = classTree.buildFullTree();
+                final List<TreeNode> modified = classTree.buildEditedFullTree();
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         try {
+                            treeRoots = roots;
+                            modifiedNodes = modified;
                             updateToolbar();
                             refreshExplorerPage(0);
                             showTreeView();
