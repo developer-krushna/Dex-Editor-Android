@@ -11,6 +11,7 @@ android {
     defaultConfig {
         applicationId "modder.hub.dexeditor"
         minSdk 24
+        //noinspection ExpiredTargetSdkVersion
         targetSdk 28
         versionCode 1
         versionName "1.0 final"
@@ -31,7 +32,7 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.guava:guava:33.0.0-android'
     implementation 'com.beust:jcommander:1.82'
