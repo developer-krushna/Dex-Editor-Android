@@ -58,6 +58,8 @@ import java.util.Objects;
 
 import modder.hub.dexeditor.R;
 import modder.hub.dexeditor.model.TreeNode;
+import modder.hub.dexeditor.utils.TreeHelper;
+import modder.hub.dexeditor.utils.UIHelper;
 
 // Author ; @developer-krushna
 // Code fixed and some commments and improvements are done by AI
@@ -317,13 +319,13 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                 if (isSelectionMode) {
                     if (initialLongPressPosition == -1) {
                         initialLongPressPosition = pos;
-                        setCheckedRecursive(node, true);
+                        TreeHelper.setCheckedRecursive(node, true);
                         notifyDataSetChanged();
                     } else {
                         int start = Math.min(initialLongPressPosition, pos);
                         int end = Math.max(initialLongPressPosition, pos);
                         for (int i = start; i <= end; i++) {
-                            setCheckedRecursive(visibleNodes.get(i), true);
+                            TreeHelper.setCheckedRecursive(visibleNodes.get(i), true);
                         }
                         initialLongPressPosition = -1;
                         notifyDataSetChanged();
@@ -420,7 +422,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         } else {
             newState = !node.isChecked();
         }
-        setCheckedRecursive(node, newState);
+        TreeHelper.setCheckedRecursive(node, newState);
 
         // Update parent states if needed
         updateParentCheckState(node);
@@ -446,15 +448,6 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         // via getCheckState(), so we don't strictly need to set isChecked on folder nodes,
         // but it's good practice for consistency.
         updateParentCheckState(parent);
-    }
-
-    private void setCheckedRecursive(TreeNode node, boolean checked) {
-        node.setChecked(checked);
-        if (node.isDirectory()) {
-            for (TreeNode child : node.getChildren()) {
-                setCheckedRecursive(child, checked);
-            }
-        }
     }
 
     public List<TreeNode> getSelectedNodes() {
@@ -494,19 +487,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     @SuppressLint("NotifyDataSetChanged")
     public void clearAllSelection() {
-        clearSelectionRecursive(rootNodes);
+        TreeHelper.clearSelectionRecursive(rootNodes);
         notifyDataSetChanged();
         if (listener != null) {
             listener.onSelectionChanged(0);
-        }
-    }
-
-    private void clearSelectionRecursive(List<TreeNode> nodes) {
-        for (TreeNode node : nodes) {
-            node.setChecked(false);
-            if (!node.getChildren().isEmpty()) {
-                clearSelectionRecursive(node.getChildren());
-            }
         }
     }
 
@@ -573,18 +557,11 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         sub.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(android.view.MenuItem item) {
-                copyToClipboard(Objects.requireNonNull(item.getTitle()).toString());
+                UIHelper.copyToClipboard(context, Objects.requireNonNull(item.getTitle()).toString());
                 return true;
             }
         });
         sub.show();
-    }
-
-    private void copyToClipboard(String text) {
-        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        android.content.ClipData clip = android.content.ClipData.newPlainText("Copied Text", text);
-        clipboard.setPrimaryClip(clip);
-        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -614,7 +591,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
                         break;
                     case "Batch operations":
                         isSelectionMode = true;
-                        setCheckedRecursive(node, true);
+                        TreeHelper.setCheckedRecursive(node, true);
                         notifyDataSetChanged();
                         if (listener != null) {
                             listener.onSelectionChanged(getSelectedNodes().size());
@@ -706,7 +683,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         isSelectionMode = selectionMode;
         initialLongPressPosition = -1;
         if (!selectionMode) {
-            clearSelectionRecursive(rootNodes);
+            TreeHelper.clearSelectionRecursive(rootNodes);
         }
         notifyDataSetChanged();
     }
