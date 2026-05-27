@@ -101,9 +101,9 @@ public class ExtendedCommands {
     public static String[] parameterArgumentNames(ParameterDescription parameterDescription) {
         Parameterized parameterized = parameterDescription.getParameterized();
 
-        Class cls = parameterDescription.getObject().getClass();
+        Class<?> cls = parameterDescription.getObject().getClass();
         Field field = null;
-        while (cls != Object.class) {
+        while (cls != null && cls != Object.class) {
             try {
                 field = cls.getDeclaredField(parameterized.getName());
             } catch (NoSuchFieldException ex) {
@@ -119,6 +119,25 @@ public class ExtendedCommands {
             return extendedParameter.argumentNames();
         }
 
+        return new String[0];
+    }
+
+    @Nonnull
+    public static String[] mainParameterArgumentNames(JCommander jc) {
+        Object command = jc.getObjects().get(0);
+        Class<?> cls = command.getClass();
+        while (cls != null && cls != Object.class) {
+            for (Field field : cls.getDeclaredFields()) {
+                com.beust.jcommander.Parameter annotation = field.getAnnotation(com.beust.jcommander.Parameter.class);
+                if (annotation != null && annotation.names().length == 0) {
+                    ExtendedParameter extendedParameter = field.getAnnotation(ExtendedParameter.class);
+                    if (extendedParameter != null) {
+                        return extendedParameter.argumentNames();
+                    }
+                }
+            }
+            cls = cls.getSuperclass();
+        }
         return new String[0];
     }
 
