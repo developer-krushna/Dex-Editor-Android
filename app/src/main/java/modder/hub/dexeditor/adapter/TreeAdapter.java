@@ -33,6 +33,7 @@ package modder.hub.dexeditor.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -40,6 +41,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -57,6 +59,7 @@ import java.util.List;
 import java.util.Objects;
 
 import modder.hub.dexeditor.R;
+import modder.hub.dexeditor.activity.DexEditorActivity;
 import modder.hub.dexeditor.model.TreeNode;
 import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.utils.UIHelper;
@@ -76,6 +79,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     private final List<TreeNode> rootNodes;
     private final OnNodeClickListener listener;
     private final Context context;
+    private final float density;
+
+    private static GradientDrawable folderDrawable;
+    private static GradientDrawable classDrawable;
 
     // UI state flags
     private boolean isSelectionMode = false;
@@ -94,6 +101,10 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         this(context, rootNodes, listener, isHistory, false);
     }
 
+    private static final int TYPE_DIRECTORY = 0;
+    private static final int TYPE_CLASS = 1;
+    private static final int TYPE_SNIPPET = 2;
+
     public TreeAdapter(Context context, List<TreeNode> rootNodes, OnNodeClickListener listener, boolean isHistory, boolean isModifiedList) {
         this.context = context;
         this.listener = listener;
@@ -101,8 +112,21 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         this.visibleNodes.addAll(rootNodes);
         this.isHistory = isHistory;
         this.isModifiedList = isModifiedList;
+        this.density = context.getResources().getDisplayMetrics().density;
+
+        if (folderDrawable == null) {
+            folderDrawable = new GradientDrawable();
+            folderDrawable.setCornerRadius(5 * density); // Minimal radius for folder (Standard)
+            folderDrawable.setColor(0xFF252525);
+        }
+        if (classDrawable == null) {
+            classDrawable = new GradientDrawable();
+            classDrawable.setCornerRadius(100 * density); // Fully circular for Class
+            classDrawable.setColor(0xFF3860AF);
+        }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setHighlightedFullName(String fullName) {
         this.highlightedFullName = fullName;
         notifyDataSetChanged();
@@ -110,7 +134,19 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     public void setSearchList(boolean searchList, String query) {
         this.isSearchList = searchList;
+        if (query == null || !query.equals(this.searchQuery)) {
+            clearCachedSpannedNamesRecursive(rootNodes);
+        }
         this.searchQuery = query;
+    }
+
+    private void clearCachedSpannedNamesRecursive(List<TreeNode> nodes) {
+        for (TreeNode node : nodes) {
+            node.setCachedSpannedName(null);
+            if (!node.getChildren().isEmpty()) {
+                clearCachedSpannedNamesRecursive(node.getChildren());
+            }
+        }
     }
 
     public List<TreeNode> getRootNodes() {
@@ -124,15 +160,17 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     @SuppressLint("NotifyDataSetChanged")
     public void refreshVisibleNodes() {
         visibleNodes.clear();
-        addVisibleNodesRecursive(rootNodes);
+        addVisibleNodesRecursive(rootNodes, 0);
         notifyDataSetChanged();
     }
 
-    private void addVisibleNodesRecursive(List<TreeNode> nodes) {
+    private void addVisibleNodesRecursive(List<TreeNode> nodes, int depth) {
+        if (nodes == null) return;
         for (TreeNode node : nodes) {
+            node.setDepth(depth);
             visibleNodes.add(node);
-            if (node.isExpanded() && !node.getChildren().isEmpty()) {
-                addVisibleNodesRecursive(node.getChildren());
+            if (node.isExpanded() && node.getChildren() != null && !node.getChildren().isEmpty()) {
+                addVisibleNodesRecursive(node.getChildren(), depth + 1);
             }
         }
     }
@@ -145,149 +183,57 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         return visibleNodes;
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        TreeNode node = visibleNodes.get(position);
+        if (node.isDirectory()) return TYPE_DIRECTORY;
+        if (node.isSnippet()) return TYPE_SNIPPET;
+        return TYPE_CLASS;
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.class_holder, parent, false);
-        return new ViewHolder(view);
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        TreeNode node = visibleNodes.get(position);
-
-        holder.name.setText(node.getName());
-
-        // Show the full path as a subtitle if we're in history mode
-        if (isHistory && !node.isDirectory()) {
-            holder.subtitle.setVisibility(View.VISIBLE);
-            holder.subtitle.setText(node.getFullName());
-        } else {
-            holder.subtitle.setVisibility(View.GONE);
-        }
-
-        // Highlight the item if it matches the current focus or snippet style
-        if (node.isSnippet()) {
-            holder.itemContent.setBackgroundResource(android.R.drawable.list_selector_background);
-            holder.divider.setVisibility(View.VISIBLE);
-        } else {
-            holder.divider.setVisibility(View.GONE);
-            if (highlightedFullName != null && highlightedFullName.equals(node.getFullName())) {
-                holder.itemContent.setBackgroundColor(0xFFE1F5FE);
-            } else {
-                holder.itemContent.setBackgroundResource(R.drawable.rounded_corner_ripple);
-            }
-        }
-
-        // Handle indentation to visually represent the hierarchy
-        int depth = getCalculatedDepth(node);
-        int indent = isHistory ? 0 : (int) (depth * 10 * context.getResources().getDisplayMetrics().density);
-        if (node.isSnippet()) {
-            holder.itemContent.setPadding(indent + 8, 4, 8, 4);
-        } else {
-            holder.itemContent.setPadding(indent + 8, 2, 8, 2);
-        }
-
-        // Setup checkbox state (supports partial selection for folders)
-        holder.checkBox.setVisibility(isSelectionMode ? View.VISIBLE : View.GONE);
-        holder.checkBox.setOnCheckedChangeListener(null);
-
-        if (node.isDirectory()) {
-            CheckState state = getCheckState(node);
-            if (state == CheckState.PARTIAL) {
-                holder.checkBox.setButtonDrawable(R.drawable.ic_checkbox_partial);
-                holder.checkBox.setChecked(true);
-            } else {
-                holder.checkBox.setButtonDrawable(holder.defaultCheckBoxDrawable);
-                holder.checkBox.setChecked(state == CheckState.CHECKED);
-            }
-        } else {
-            holder.checkBox.setButtonDrawable(holder.defaultCheckBoxDrawable);
-            holder.checkBox.setChecked(node.isChecked());
-        }
-
-        // Set icons: folders vs classes vs snippets
-        if (node.isDirectory()) {
-            holder.arrow.setVisibility(isHistory ? View.GONE : View.VISIBLE);
-            holder.arrow.setRotation(node.isExpanded() ? 45 : 0);
-            holder.icon.setVisibility(View.VISIBLE);
-            holder.smaliSymbol.setVisibility(View.GONE);
-            holder.icon.setImageResource(R.drawable.ic_folder_mt);
-            holder.iconBackground.setBackground(createDrawable(10, 0xFF252525));
-        } else if (node.isSnippet()) {
-            holder.arrow.setVisibility(View.GONE);
-            holder.icon.setVisibility(View.GONE);
-            holder.smaliSymbol.setVisibility(View.GONE);
-            holder.iconBackground.setBackground(null);
-            holder.name.setSingleLine(true);
-            holder.name.setEllipsize(null); // Manual truncation
-
-            // Highlight search query within the snippet text
-            if (searchQuery != null && !searchQuery.isEmpty()) {
-                String text = node.getName();
-                String lowerText = text.toLowerCase();
-                String lowerQuery = searchQuery.toLowerCase();
-                int firstMatch = lowerText.indexOf(lowerQuery);
-
-                if (firstMatch != -1) {
-                    int contextBefore = 30;
-                    int contextAfter = 60;
-                    int startLimit = Math.max(0, firstMatch - contextBefore);
-                    int endLimit = Math.min(text.length(), firstMatch + searchQuery.length() + contextAfter);
-                    String prefix = (startLimit > 0) ? "..." : "";
-                    String suffix = (endLimit < text.length()) ? "..." : "";
-                    String displayText = prefix + text.substring(startLimit, endLimit) + suffix;
-
-                    android.text.SpannableString spannable = new android.text.SpannableString(displayText);
-                    String lowerDisplay = displayText.toLowerCase();
-                    int s = 0;
-                    while ((s = lowerDisplay.indexOf(lowerQuery, s)) != -1) {
-                        spannable.setSpan(new android.text.style.BackgroundColorSpan(0xFFB3E5FC), s, s + searchQuery.length(), android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        s += searchQuery.length();
-                    }
-                    holder.name.setText(spannable);
-                } else {
-                    holder.name.setText(text);
-                }
-            } else {
-                holder.name.setText(node.getName());
-            }
-        } else {
-            holder.arrow.setVisibility(View.INVISIBLE);
-            holder.icon.setVisibility(View.GONE);
-            holder.smaliSymbol.setVisibility(View.VISIBLE);
-            holder.smaliSymbol.setText("C"); // 'C' for Class
-            holder.smaliSymbol.setTypeface(Typeface.MONOSPACE);
-            holder.iconBackground.setBackground(createDrawable(100, 0xFF3860AF));
-        }
-
+        final ViewHolder holder = new ViewHolder(view);
+        
         holder.arrow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 int pos = holder.getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION) {
-                    toggleNode(node, pos);
-                }
+                if (pos != RecyclerView.NO_POSITION) toggleNode(visibleNodes.get(pos), pos);
             }
         });
 
-        // Item click (Background ripple is on itemContent)
         holder.itemContent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 int pos = holder.getBindingAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION) return;
-
+                TreeNode node = visibleNodes.get(pos);
                 if (node.isDirectory() && !isHistory) {
                     toggleNode(node, pos);
                 } else if (node.isSnippet()) {
-                    if (listener != null) {
-                        listener.onNodeClick(node);
+                    if (isSearchList) {
+                        boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+                        if (isDeleted) {
+                            showDeletedPrompt(node, pos);
+                            return;
+                        }
                     }
+                    if (listener != null) listener.onNodeClick(node);
                 } else {
                     if (!isSelectionMode) {
+                        if (isHistory && !node.isDirectory()) {
+                            boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+                            if (isDeleted) {
+                                showDeletedPrompt(node, pos);
+                                return;
+                            }
+                        }
+
                         if (isSearchList) {
+                            // Toggle expansion for classes in search results instead of opening editor
                             toggleNode(node, pos);
                         } else if (listener != null) {
                             listener.onNodeClick(node);
@@ -299,14 +245,11 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         });
 
-        // Checkbox click
         holder.checkBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 int pos = holder.getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION) {
-                    toggleChecked(node, pos);
-                }
+                if (pos != RecyclerView.NO_POSITION) toggleChecked(visibleNodes.get(pos), pos);
             }
         });
 
@@ -315,48 +258,302 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             public boolean onLongClick(View v) {
                 int pos = holder.getBindingAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION) return true;
-
-                if (isSelectionMode) {
-                    if (initialLongPressPosition == -1) {
-                        initialLongPressPosition = pos;
-                        TreeHelper.setCheckedRecursive(node, true);
-                        notifyDataSetChanged();
-                    } else {
-                        int start = Math.min(initialLongPressPosition, pos);
-                        int end = Math.max(initialLongPressPosition, pos);
-                        for (int i = start; i <= end; i++) {
-                            TreeHelper.setCheckedRecursive(visibleNodes.get(i), true);
-                        }
-                        initialLongPressPosition = -1;
-                        notifyDataSetChanged();
-                    }
-                    if (listener != null) {
-                        listener.onSelectionChanged(getSelectedNodes().size());
-                    }
-                } else {
-                    if (isHistory) {
-                        showHistoryPopupMenu(v, node, pos);
-                    } else if (isModifiedList) {
-                        if (!node.isDirectory()) {
-                            showModifiedPopupMenu(v, node, pos);
-                        }
-                    } else if (isSearchList) {
-                        if (!node.isDirectory() && !node.isSnippet()) {
-                            showSearchPopupMenu(v, node, pos);
-                        }
-                    } else {
-                        showPopupMenu(v, node, pos);
-                    }
-                }
+                handleLongClick(v, visibleNodes.get(pos), pos);
                 return true;
             }
         });
+
+        return holder;
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        TreeNode node = visibleNodes.get(position);
+        int type = getItemViewType(position);
+
+        // 1. Icons and Fixed States based on type
+        switch (type) {
+            case TYPE_DIRECTORY:
+                if (!isHistory) {
+                    if (holder.arrow.getVisibility() != View.VISIBLE) {
+                        holder.arrow.setVisibility(View.VISIBLE);
+                    }
+                    holder.arrow.setRotation(node.isExpanded() ? 45 : 0);
+                } else {
+                    if (holder.arrow.getVisibility() != View.GONE) {
+                        holder.arrow.setVisibility(View.GONE);
+                    }
+                }
+                if (holder.icon.getVisibility() != View.VISIBLE) {
+                    holder.icon.setVisibility(View.VISIBLE);
+                }
+                if (holder.smaliSymbol.getVisibility() != View.GONE) {
+                    holder.smaliSymbol.setVisibility(View.GONE);
+                }
+                if (holder.iconBackground.getVisibility() != View.VISIBLE) {
+                    holder.iconBackground.setVisibility(View.VISIBLE);
+                }
+                holder.icon.setImageResource(R.drawable.ic_folder_mt);
+                holder.iconBackground.setBackground(folderDrawable);
+                holder.iconBackground.setElevation(5);
+                break;
+            case TYPE_SNIPPET:
+                if (holder.arrow.getVisibility() != View.GONE) {
+                    holder.arrow.setVisibility(View.GONE);
+                }
+                if (holder.icon.getVisibility() != View.GONE) {
+                    holder.icon.setVisibility(View.GONE);
+                }
+                if (holder.smaliSymbol.getVisibility() != View.GONE) {
+                    holder.smaliSymbol.setVisibility(View.GONE);
+                }
+                if (holder.iconBackground.getVisibility() != View.GONE) {
+                    holder.iconBackground.setVisibility(View.GONE);
+                }
+                holder.iconBackground.setBackground(null);
+                break;
+            case TYPE_CLASS:
+                if (holder.arrow.getVisibility() != View.GONE) {
+                    holder.arrow.setVisibility(View.GONE);
+                }
+                if (holder.icon.getVisibility() != View.GONE) {
+                    holder.icon.setVisibility(View.GONE);
+                }
+                if (holder.smaliSymbol.getVisibility() != View.VISIBLE) {
+                    holder.smaliSymbol.setVisibility(View.VISIBLE);
+                }
+                if (holder.iconBackground.getVisibility() != View.VISIBLE) {
+                    holder.iconBackground.setVisibility(View.VISIBLE);
+                }
+                holder.smaliSymbol.setText("C");
+                holder.smaliSymbol.setTypeface(Typeface.MONOSPACE);
+                holder.iconBackground.setBackground(classDrawable);
+                holder.iconBackground.setElevation(5);
+                break;
+        }
+
+        // 2. Text
+        if (type == TYPE_SNIPPET) {
+            holder.name.setSingleLine(true);
+            CharSequence cached = node.getCachedSpannedName();
+            if (cached != null) {
+                holder.name.setText(cached);
+            } else {
+                highlightSnippet(holder.name, node, searchQuery);
+            }
+        } else {
+            holder.name.setText(node.getName());
+            holder.name.setSingleLine(false);
+        }
+
+        // 3. Subtitle (History)
+        if (isHistory && type == TYPE_CLASS) {
+            if (holder.subtitle.getVisibility() != View.VISIBLE) {
+                holder.subtitle.setVisibility(View.VISIBLE);
+            }
+            holder.subtitle.setText(node.getFullName());
+        } else {
+            if (holder.subtitle.getVisibility() != View.GONE) {
+                holder.subtitle.setVisibility(View.GONE);
+            }
+        }
+
+        // Apply strike-through for deleted classes in history and search
+        if ((isHistory || isSearchList) && (type == TYPE_CLASS || type == TYPE_SNIPPET)) {
+            boolean isDeleted = DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
+            if (isDeleted) {
+                holder.name.setPaintFlags(holder.name.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                holder.subtitle.setPaintFlags(holder.subtitle.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            } else {
+                holder.name.setPaintFlags(holder.name.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+                holder.subtitle.setPaintFlags(holder.subtitle.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            }
+        } else {
+            holder.name.setPaintFlags(holder.name.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+        }
+
+        // 4. Background
+        if (type == TYPE_SNIPPET) {
+            holder.itemContent.setBackgroundResource(R.drawable.item_background);
+        } else {
+            if (highlightedFullName != null && highlightedFullName.equals(node.getFullName())) {
+                holder.itemContent.setBackgroundColor(0xFFE1F5FE);
+            } else {
+                android.util.TypedValue outValue = new android.util.TypedValue();
+                context.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+                holder.itemContent.setBackgroundResource(outValue.resourceId);
+            }
+        }
+
+        // 5. Indentation
+        int arrowWidth = (int) (14 * density);
+        int itemPaddingLeft = (int) (4 * density);
+        int checkboxWidth = (isSelectionMode ? (int) (28 * density) : 0);
+        int iconWidth = (int) (28 * density); // 20dp + 4dp margin each side
+        int textPadding = (int) (6 * density);
+
+        // Slightly reduced indent to balance alignment
+        int indentPerLevel = (int) (24 * density);
+
+        int depth = node.getDepth();
+        int indent;
+
+        if (isSearchList) {
+            if (type == TYPE_CLASS) {
+                // Indent search results by one full level to separate from root folders
+                indent = indentPerLevel;
+            } else if (type == TYPE_SNIPPET) {
+                // Align Snippet text with Class text
+                // Class text starts at: Indent(24) + Checkbox + IconWidth(28) + Padding(6)
+                indent = indentPerLevel + checkboxWidth + iconWidth;
+            } else {
+                indent = 0;
+            }
+        } else if (isHistory) {
+            indent = 0;
+        } else {
+            // Main Tree
+            indent = depth * indentPerLevel;
+            if (type != TYPE_DIRECTORY) {
+                indent += arrowWidth;
+            }
+        }
+
+        int topBottomPadding = (type == TYPE_SNIPPET) ? 4 : 2;
+        if (holder.lastIndent != indent || holder.lastTopBottomPadding != topBottomPadding) {
+            ViewGroup.LayoutParams lp = holder.indentSpacer.getLayoutParams();
+            lp.width = indent;
+            holder.indentSpacer.setLayoutParams(lp);
+
+            holder.itemContent.setPadding(itemPaddingLeft, topBottomPadding, (int) (24 * density), topBottomPadding);
+            holder.lastIndent = indent;
+            holder.lastTopBottomPadding = topBottomPadding;
+        }
+
+        // Divider visibility logic
+        boolean showDivider = false;
+        if (isSearchList) {
+            if (type == TYPE_CLASS || type == TYPE_SNIPPET) {
+                showDivider = true;
+                // If next node exists and is a directory, hide divider to avoid "divider before folder"
+                if (position + 1 < visibleNodes.size()) {
+                    if (visibleNodes.get(position + 1).isDirectory()) {
+                        showDivider = false;
+                    }
+                }
+            }
+        }
+        holder.divider.setVisibility(showDivider ? View.VISIBLE : View.GONE);
+
+        // Align divider with text
+        if (showDivider) {
+             LinearLayout.LayoutParams dlp = (LinearLayout.LayoutParams) holder.divider.getLayoutParams();
+             // Text starts after: checkbox + icon + textPadding
+             int textStartOffset = checkboxWidth + (type != TYPE_SNIPPET ? iconWidth : 0) + textPadding + itemPaddingLeft;
+             dlp.leftMargin = textStartOffset;
+             dlp.rightMargin = (int) (16 * density);
+             holder.divider.setLayoutParams(dlp);
+        }
+
+        // 6. Checkbox
+        if (isSelectionMode) {
+            if (holder.checkBox.getVisibility() != View.VISIBLE) holder.checkBox.setVisibility(View.VISIBLE);
+            holder.checkBox.setOnCheckedChangeListener(null);
+            if (type == TYPE_DIRECTORY) {
+                CheckState state = getCheckState(node);
+                if (state == CheckState.PARTIAL) {
+                    holder.checkBox.setButtonDrawable(R.drawable.ic_checkbox_partial);
+                    holder.checkBox.setChecked(true);
+                } else {
+                    holder.checkBox.setButtonDrawable(holder.defaultCheckBoxDrawable);
+                    holder.checkBox.setChecked(state == CheckState.CHECKED);
+                }
+            } else {
+                holder.checkBox.setButtonDrawable(holder.defaultCheckBoxDrawable);
+                holder.checkBox.setChecked(node.isChecked());
+            }
+        } else {
+            if (holder.checkBox.getVisibility() != View.GONE) holder.checkBox.setVisibility(View.GONE);
+        }
+    }
+
+    private void highlightSnippet(TextView textView, TreeNode node, String query) {
+        String text = node.getName();
+        String lowerText = text.toLowerCase();
+        String lowerQuery = query.toLowerCase();
+        int firstMatch = lowerText.indexOf(lowerQuery);
+
+        if (firstMatch != -1) {
+            // Priority to highlighted part: center it in the snippet
+            int contextBefore = 40;
+            int contextAfter = 60;
+            int startLimit = Math.max(0, firstMatch - contextBefore);
+            int endLimit = Math.min(text.length(), firstMatch + query.length() + contextAfter);
+            
+            String prefix = (startLimit > 0) ? "..." : "";
+            String suffix = (endLimit < text.length()) ? "..." : "";
+            String displayText = prefix + text.substring(startLimit, endLimit).replace("\n", " ").replace("\r", " ") + suffix;
+
+            android.text.SpannableString spannable = new android.text.SpannableString(displayText);
+            String lowerDisplay = displayText.toLowerCase();
+            int s = 0;
+            while ((s = lowerDisplay.indexOf(lowerQuery, s)) != -1) {
+                spannable.setSpan(new android.text.style.BackgroundColorSpan(0xFFB3E5FC), s, s + query.length(), android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                s += query.length();
+            }
+            node.setCachedSpannedName(spannable);
+            textView.setText(spannable);
+        } else {
+            String cleanText = text.replace("\n", " ").replace("\r", " ");
+            node.setCachedSpannedName(cleanText);
+            textView.setText(cleanText);
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void handleLongClick(View v, TreeNode node, int pos) {
+        if (isSelectionMode) {
+            if (initialLongPressPosition == -1) {
+                initialLongPressPosition = pos;
+                TreeHelper.setCheckedRecursive(node, true);
+                notifyDataSetChanged();
+            } else {
+                int start = Math.min(initialLongPressPosition, pos);
+                int end = Math.max(initialLongPressPosition, pos);
+                for (int i = start; i <= end; i++) {
+                    TreeHelper.setCheckedRecursive(visibleNodes.get(i), true);
+                }
+                initialLongPressPosition = -1;
+                notifyDataSetChanged();
+            }
+            if (listener != null) {
+                listener.onSelectionChanged(getSelectedNodes().size());
+            }
+        } else {
+            if (isHistory) {
+                showHistoryPopupMenu(v, node, pos);
+            } else if (isModifiedList) {
+                if (!node.isDirectory()) showModifiedPopupMenu(v, node, pos);
+            } else if (isSearchList) {
+                if (!node.isDirectory() && !node.isSnippet()) showSearchPopupMenu(v, node, pos);
+            } else {
+                showPopupMenu(v, node, pos);
+            }
+        }
+    }
+
+    private boolean isNodeDeleted(TreeNode node) {
+        return DexEditorActivity.classTree != null && !DexEditorActivity.classTree.classMap.containsKey(node.getFullName());
     }
 
     private void showSearchPopupMenu(View view, TreeNode node, int pos) {
+        boolean isDeleted = isNodeDeleted(node);
         PopupMenu popup = new PopupMenu(context, view);
         popup.getMenu().add("Copy");
-        popup.getMenu().add("Locate");
+        if (!isDeleted) {
+            popup.getMenu().add("Locate");
+        }
         popup.getMenu().add("Remove from search result");
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -376,6 +573,23 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             }
         });
         popup.show();
+    }
+
+    private void showDeletedPrompt(TreeNode node, int position) {
+        new MaterialAlertDialogBuilder(context)
+                .setTitle("Class deleted")
+                .setMessage("This class has been deleted. Do you want to remove it from " + (isHistory ? "history" : "search results") + "?")
+                .setPositiveButton("Remove", new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        visibleNodes.remove(position);
+                        rootNodes.remove(node);
+                        notifyItemRemoved(position);
+                        if (listener != null) listener.onNodeDeleted(node);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     /**
@@ -468,7 +682,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void selectAllRest() {
+    public void invertSelection() {
         invertSelectionRecursive(rootNodes);
         notifyDataSetChanged();
         if (listener != null) {
@@ -496,10 +710,13 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     @SuppressLint("NotifyDataSetChanged")
     private void showModifiedPopupMenu(View view, TreeNode node, int position) {
+        boolean isDeleted = isNodeDeleted(node);
         PopupMenu popup = new PopupMenu(context, view);
         popup.getMenu().add(0, 0, 0, "Copy");
-        popup.getMenu().add(0, 1, 0, "Locate");
-        popup.getMenu().add(0, 2, 0, "Compare the difference");
+        if (!isDeleted) {
+            popup.getMenu().add(0, 1, 0, "Locate");
+            popup.getMenu().add(0, 2, 0, "Compare the difference");
+        }
 
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -520,9 +737,12 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
     @SuppressLint("NotifyDataSetChanged")
     private void showHistoryPopupMenu(View view, TreeNode node, int position) {
+        boolean isDeleted = isNodeDeleted(node);
         PopupMenu popup = new PopupMenu(context, view);
         popup.getMenu().add(0, 0, 0, "Copy").setActionView(null);
-        popup.getMenu().add(0, 1, 0, "Locate");
+        if (!isDeleted) {
+            popup.getMenu().add(0, 1, 0, "Locate");
+        }
         popup.getMenu().add(0, 2, 0, "Delete");
 
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -567,7 +787,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
     @SuppressLint("NotifyDataSetChanged")
     private void showPopupMenu(View view, TreeNode node, int position) {
         PopupMenu popup = new PopupMenu(context, view);
-        if (node.getName().contains(".")) {
+        if (node.isDirectory()) {
             popup.getMenu().add("Search");
         } else {
             popup.getMenu().add("Copy");
@@ -583,6 +803,9 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             public boolean onMenuItemClick(android.view.MenuItem item) {
                 String title = Objects.requireNonNull(item.getTitle()).toString();
                 switch (title) {
+                    case "Search":
+                        if (listener != null) listener.onSearch(node);
+                        break;
                     case "Copy":
                         showCopySubMenu(view, node);
                         break;
@@ -697,34 +920,26 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         notifyItemChanged(position);
     }
 
-    private int getCalculatedDepth(TreeNode node) {
-        int depth = 0;
-        TreeNode parent = node.getParent();
-        while (parent != null) {
-            depth++;
-            parent = parent.getParent();
-        }
-        return depth;
-    }
-
     /**
      * Expands a node and inserts its children into the visible list.
      */
     private void expandNode(TreeNode node, int position) {
         node.setExpanded(true);
         List<TreeNode> toAdd = new ArrayList<>();
-        getChildrenRecursive(node, toAdd);
+        getChildrenRecursive(node, toAdd, node.getDepth() + 1);
         if (!toAdd.isEmpty()) {
             visibleNodes.addAll(position + 1, toAdd);
             notifyItemRangeInserted(position + 1, toAdd.size());
         }
     }
 
-    private void getChildrenRecursive(TreeNode parent, List<TreeNode> result) {
+    private void getChildrenRecursive(TreeNode parent, List<TreeNode> result, int currentDepth) {
+        if (parent.getChildren() == null) return;
         for (TreeNode child : parent.getChildren()) {
+            child.setDepth(currentDepth);
             result.add(child);
             if (child.isExpanded()) {
-                getChildrenRecursive(child, result);
+                getChildrenRecursive(child, result, currentDepth + 1);
             }
         }
     }
@@ -786,6 +1001,9 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
 
         default void onCopyName(TreeNode node) {
         }
+
+        default void onSearch(TreeNode node) {
+        }
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -795,10 +1013,15 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
         ImageView icon;
         ImageView arrow;
         CheckBox checkBox;
-        LinearLayout iconBackground;
+        FrameLayout iconBackground;
         LinearLayout itemContent;
         View divider;
+        View indentSpacer;
         Drawable defaultCheckBoxDrawable;
+
+        // Cache last values to avoid redundant layout triggers
+        int lastIndent = -1;
+        int lastTopBottomPadding = -1;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -811,6 +1034,7 @@ public class TreeAdapter extends RecyclerView.Adapter<TreeAdapter.ViewHolder> {
             checkBox = itemView.findViewById(R.id.checkbox);
             iconBackground = itemView.findViewById(R.id.icon_background);
             divider = itemView.findViewById(R.id.divider);
+            indentSpacer = itemView.findViewById(R.id.indent_spacer);
             defaultCheckBoxDrawable = androidx.core.widget.CompoundButtonCompat.getButtonDrawable(checkBox);
         }
     }

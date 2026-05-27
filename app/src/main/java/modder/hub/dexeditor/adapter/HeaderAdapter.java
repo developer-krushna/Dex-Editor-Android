@@ -31,13 +31,14 @@
 
 package modder.hub.dexeditor.adapter;
 
-import android.graphics.Color;
-import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import modder.hub.dexeditor.R;
 
 /*
  * Author - @developer-krushna
@@ -46,29 +47,38 @@ import androidx.recyclerview.widget.RecyclerView;
 
 public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.ViewHolder> {
     private final String title;
+    private OnMenuClickListener menuClickListener;
 
     public HeaderAdapter(String title) {
         this.title = title;
     }
 
+    public HeaderAdapter(String title, OnMenuClickListener menuClickListener) {
+        this.title = title;
+        this.menuClickListener = menuClickListener;
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        TextView textView = new TextView(parent.getContext());
-        textView.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, parent.getResources().getDisplayMetrics());
-        textView.setPadding(padding, padding / 2, padding, padding / 2);
-        textView.setTextSize(14);
-        textView.setTextColor(Color.GRAY);
-        textView.setBackgroundColor(Color.parseColor("#F5F5F5"));
-        return new ViewHolder(textView);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.header_item, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        ((TextView) holder.itemView).setText(title);
+        holder.title.setText(title);
+        if (menuClickListener != null) {
+            holder.menu.setVisibility(View.VISIBLE);
+            holder.menu.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    menuClickListener.onMenuClick(v);
+                }
+            });
+        } else {
+            holder.menu.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -76,9 +86,18 @@ public class HeaderAdapter extends RecyclerView.Adapter<HeaderAdapter.ViewHolder
         return 1;
     }
 
+    public interface OnMenuClickListener {
+        void onMenuClick(View view);
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView title;
+        ImageView menu;
+
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            title = itemView.findViewById(R.id.header_title);
+            menu = itemView.findViewById(R.id.header_menu);
         }
     }
 }
