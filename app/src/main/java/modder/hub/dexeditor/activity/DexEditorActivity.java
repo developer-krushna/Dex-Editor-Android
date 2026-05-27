@@ -31,6 +31,8 @@
 
 package modder.hub.dexeditor.activity;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.DialogInterface;
@@ -48,6 +50,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -56,6 +59,7 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.appcompat.widget.PopupMenu;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -91,9 +95,9 @@ import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow;
-import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import modder.hub.dexeditor.R;
 import modder.hub.dexeditor.adapter.HeaderAdapter;
+import modder.hub.dexeditor.adapter.StringAdapter;
 import modder.hub.dexeditor.adapter.TreeAdapter;
 import modder.hub.dexeditor.fragment.EditorFragment;
 import modder.hub.dexeditor.fragment.SearchFragment;
@@ -104,10 +108,12 @@ import modder.hub.dexeditor.utils.EditorHelper;
 import modder.hub.dexeditor.utils.EditorPositionManager;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
-import modder.hub.dexeditor.utils.SmaliHelper;
-import modder.hub.dexeditor.utils.SmaliInstructionHelper;
+import modder.hub.dexeditor.smali.SmaliHelper;
+import modder.hub.dexeditor.smali.SmaliInstructionHelper;
+import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.views.AlertCircularProgress;
 import modder.hub.dexeditor.views.AlertProgress;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 import modder.hub.dexeditor.views.SmaliInstructionsDialog;
 import modder.hub.dexeditor.views.TextActionWindow;
 
@@ -138,20 +144,23 @@ public class DexEditorActivity extends AppCompatActivity {
     // --- Member Fields ---
     public int dexVersion;
     public List<TreeNode> searchNodes = new ArrayList<>();
+    public String pendingSearchPath = null;
     public TabsAdapter tabsAdapter;
     private List<String> dexPaths;
-    private List<TreeNode> treeRoots = new ArrayList<>();
-    private List<TreeNode> modifiedNodes = new ArrayList<>();
+    private final List<TreeNode> treeRoots = new ArrayList<>();
+    private final List<TreeNode> modifiedNodes = new ArrayList<>();
+    private boolean needsModifiedTreeRebuild = true;
     private long lastBackPressTime = 0;
     private SharedPreferences dexPref;
     private Menu optionsMenu;
     // --- UI Components ---
     private DrawerLayout drawerLayout;
     private Toolbar toolbar;
+    private Toolbar drawerToolbar;
     private ActionBarDrawerToggle drawerToggle;
     private ViewPager2 viewPager;
     private TabAdapter tabAdapter;
-    private RecyclerView tabsRecyclerView;
+    private FastScrollerRecyclerView tabsRecyclerView;
     private View classListContainer;
     private TabLayout explorerTabLayout;
     private ViewPager2 explorerViewPager;
@@ -214,6 +223,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         if (viewPager.getVisibility() == View.VISIBLE) {
+            if (viewPager.getTranslationX() != 0) return; // Ignore back while animating
             if (!tabNavigationHistory.isEmpty()) {
                 int lastIndex = tabNavigationHistory.pop();
                 if (lastIndex >= 0 && lastIndex < tabs.size()) {
@@ -260,11 +270,24 @@ public class DexEditorActivity extends AppCompatActivity {
         toolbar = findViewById(R.id._toolbar);
         setSupportActionBar(toolbar);
 
+        drawerToolbar = findViewById(R.id.drawer_toolbar);
+        drawerToolbar.setOverflowIcon(ContextCompat.getDrawable(this, R.drawable.ic_more_mt));
+        if (drawerToolbar.getOverflowIcon() != null) {
+            androidx.core.graphics.drawable.DrawableCompat.setTint(drawerToolbar.getOverflowIcon(), Color.WHITE);
+        }
+        setupDrawerToolbar();
+
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawerLayout.addDrawerListener(drawerToggle);
         drawerLayout.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
             @Override
             public void onDrawerOpened(View drawerView) {
+                // Ensure the "Home" item highlight and menu states are up to date
+                if (tabsAdapter != null) {
+                    tabsAdapter.notifyItemChanged(0);
+                }
+                updateDrawerMenuState();
+
                 if (viewPager.getVisibility() == View.VISIBLE && currentTabIndex != -1) {
                     tabsRecyclerView.scrollToPosition(currentTabIndex + 1);
                 }
@@ -296,6 +319,7 @@ public class DexEditorActivity extends AppCompatActivity {
             }
         });
 
+        tabsRecyclerView.setTrackVisible(false);
         tabsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tabsAdapter = new TabsAdapter();
         tabsRecyclerView.setAdapter(tabsAdapter);
@@ -314,6 +338,10 @@ public class DexEditorActivity extends AppCompatActivity {
         explorerViewPager = findViewById(R.id.explorer_view_pager);
         explorerTabAdapter = new ExplorerTabAdapter(this);
         explorerViewPager.setAdapter(explorerTabAdapter);
+        explorerViewPager.setOffscreenPageLimit(1);
+        
+        // Optimize drag sensitivity for smoother tab switching
+        reduceDragSensitivity(explorerViewPager);
 
         new TabLayoutMediator(explorerTabLayout, explorerViewPager, new TabLayoutMediator.TabConfigurationStrategy() {
             @Override
@@ -358,11 +386,21 @@ public class DexEditorActivity extends AppCompatActivity {
                 if (position == 3 && stringList.isEmpty()) {
                     loadStrings();
                 }
+                refreshExplorerPage(position);
             }
         });
     }
 
     private void initializeLogic() {
+        // Pre-initialize heavy components in background to avoid lag on first editor open
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                SmaliInstructionHelper.init(getApplicationContext());
+                EditorFragment.ensureLanguageInitialized(getApplicationContext());
+            }
+        }).start();
+
         tabs.clear();
         currentTabIndex = -1;
         isChanged = false;
@@ -383,6 +421,7 @@ public class DexEditorActivity extends AppCompatActivity {
         setTitle("Dex Editor Plus");
         showProcessingProgress(true);
         fabDelete.setBackgroundTintList(ColorStateList.valueOf(0xFFF44336));
+        fabDelete.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
         fabDelete.hide();
 
         String uniqueId = (System.currentTimeMillis() % 1000000) + "_" + (new java.util.Random().nextInt(9000) + 1000);
@@ -678,8 +717,8 @@ public class DexEditorActivity extends AppCompatActivity {
     // when closing the editor fragment tab if the class is edited then there will be a prompt for
     private void closeTabWithPrompt(int index) {
         if (index < 0 || index >= tabs.size()) return;
-        EditorTab tab = tabs.get(index);
-        String className = tab.className;
+        final EditorTab tab = tabs.get(index);
+        final String className = tab.className;
 
         EditorFragment fragment = getFragmentAtIndex(index);
         if (fragment != null) {
@@ -693,11 +732,11 @@ public class DexEditorActivity extends AppCompatActivity {
                     .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface d, int w) {
-                            saveTab(index, new Runnable() {
+                            saveTab(tab, new Runnable() {
                                 @Override
                                 public void run() {
                                     clearPositionSaving(className);
-                                    removeTab(index);
+                                    removeTab(tab);
                                 }
                             });
                         }
@@ -706,14 +745,14 @@ public class DexEditorActivity extends AppCompatActivity {
                         @Override
                         public void onClick(DialogInterface d, int w) {
                             clearPositionSaving(className);
-                            removeTab(index);
+                            removeTab(tab);
                         }
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
         } else {
             clearPositionSaving(className);
-            removeTab(index);
+            removeTab(tab);
         }
     }
 
@@ -725,10 +764,11 @@ public class DexEditorActivity extends AppCompatActivity {
     private void smali2java(EditorFragment fragment) {
         String code = fragment.getCode();
         String className = fragment.getClassName();
+        String title = SmaliHelper.extractSimpleName(className) + ".java";
 
         // Check if java tab already exists for this class
         for (int i = 0; i < tabs.size(); i++) {
-            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 1) {
+            if (tabs.get(i).className.equals(className) && tabs.get(i).type == 1 && tabs.get(i).title.equals(title)) {
                 showEditor(i);
                 return;
             }
@@ -746,7 +786,7 @@ public class DexEditorActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             pd.dismiss();
-                            addTab(className, SmaliHelper.extractSimpleName(className) + ".java", java, 1); // adding the java item in the recent opened classes list
+                            addTab(className, title, java, 1); // adding the java item in the recent opened classes list
                         }
                     });
                 } catch (final Exception e) {
@@ -774,13 +814,12 @@ public class DexEditorActivity extends AppCompatActivity {
     // jump to line
     private void showJumpToLineDialog(EditorFragment fragment) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_jump_to_line, null);
-        TextInputLayout textInputLayout = view.findViewById(R.id.textInputLayout);
         EditText editText = view.findViewById(R.id.editText);
         CodeEditor smaliEditor = fragment.getEditor();
 
         // set dynamic hint
-        String hint = "Line number [1-" + smaliEditor.getLineCount() + "]";
-        textInputLayout.setHint(hint);
+        String hint = "1⋯" + smaliEditor.getLineCount();
+        editText.setHint(hint);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setTitle("Jump to line")
@@ -795,13 +834,13 @@ public class DexEditorActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 if (editText.getText().toString().isEmpty()) {
-                    textInputLayout.setError("Enter something !");
+                    editText.setError("Enter something !");
                 } else {
                     try {
                         smaliEditor.jumpToLine(Integer.parseInt(editText.getText().toString()) - 1);
                         dialog_mt.dismiss();
                     } catch (Exception e) {
-                        textInputLayout.setError("Value is out of range.");
+                        editText.setError("Value is out of range.");
                     }
                 }
 
@@ -869,14 +908,25 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
-    // this is for updating the modifed section in the 'History' tab
     public void refreshExplorerPage(int position) {
-        if (position == 1 && classTree != null) {
-            modifiedNodes = classTree.buildEditedFullTree(); // a better tree structure like mt manager for the modifed classes
+        if (position == 1 && classTree != null && needsModifiedTreeRebuild) {
+            modifiedNodes.clear();
+            modifiedNodes.addAll(classTree.buildEditedFullTree());
+            needsModifiedTreeRebuild = false;
         }
         Fragment fragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + position));
         if (fragment instanceof ExplorerPageFragment) {
-            ((ExplorerPageFragment) fragment).updateUI();
+            final ExplorerPageFragment explorerFrag = (ExplorerPageFragment) fragment;
+            if (explorerFrag.rv != null) {
+                explorerFrag.rv.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        explorerFrag.updateUI();
+                    }
+                });
+            }
+        } else if (fragment instanceof SearchFragment) {
+            ((SearchFragment) fragment).refreshUI();
         }
     }
 
@@ -947,8 +997,12 @@ public class DexEditorActivity extends AppCompatActivity {
             dexVersion = dexPref.getInt("dexVer", 35);
         }
 
-        // Add tab with null content, the fragment will handle the loading
-        addTab(className, SmaliHelper.extractSimpleName(className), null, 0);
+        // Add tab with content if it's already in pendingSmaliMap or if it's already in another tab
+        String content = null;
+        if (classTree.getPendingSmaliMap().containsKey(className))
+            content = classTree.getPendingSmaliMap().get(className);
+
+        addTab(className, SmaliHelper.extractSimpleName(className), content, 0);
     }
 
     // method reposnsible for opening the editor tab according to the search reasult , line number and class name
@@ -989,60 +1043,115 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private void addTab(String className, String title, String code, int type) {
-        tabs.add(new EditorTab(className, title, code, type));
+    public void addTab(String className, String title, String code, int type) {
+        // Check if tab already exists for this class and title (avoid duplicates)
+        for (int i = 0; i < tabs.size(); i++) {
+            EditorTab existingTab = tabs.get(i);
+            if (existingTab.className.equals(className) && existingTab.title.equals(title) && existingTab.type == type) {
+                showEditor(i);
+                return;
+            }
+        }
+        
+        EditorTab tab = new EditorTab(className, title, code, type);
+        if (type == 1) { // Java
+            tab.isReadOnly = true;
+        }
+        tabs.add(tab);
         tabAdapter.notifyItemInserted(tabs.size() - 1);
         tabsAdapter.notifyDataSetChanged();
         showEditor(tabs.size() - 1);
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private void showEditor(int index) {
+    public void showEditor(int index) {
         if (index < 0 || index >= tabs.size()) return;
 
+        int oldIndex = currentTabIndex;
         boolean wasHidden = viewPager.getVisibility() != View.VISIBLE;
-        int oldIndex = viewPager.getCurrentItem();
 
         if (wasHidden) {
-            // Instantly sync state so fragments can be prepared correctly before showing
             viewPager.setCurrentItem(index, false);
-
-            classListContainer.setVisibility(View.GONE);
+            
+            float width = (float) getResources().getDisplayMetrics().widthPixels;
+            
+            viewPager.animate().cancel();
+            classListContainer.animate().cancel();
+            
+            viewPager.setTranslationX(width);
             viewPager.setVisibility(View.VISIBLE);
+            classListContainer.setVisibility(View.VISIBLE);
+
+            viewPager.animate()
+                    .translationX(0)
+                    .setDuration(280)
+                    .setInterpolator(new DecelerateInterpolator(1.1f))
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            classListContainer.setVisibility(View.GONE);
+                            classListContainer.setTranslationX(0);
+                        }
+                    })
+                    .start();
+            
+            classListContainer.animate()
+                    .translationX(-width * 0.2f)
+                    .setDuration(280)
+                    .setInterpolator(new DecelerateInterpolator(1.1f))
+                    .start();
 
             currentTabIndex = index;
-            tabsAdapter.notifyDataSetChanged();
+            // Targeted updates instead of notifyDataSetChanged
+            tabsAdapter.notifyItemChanged(0);
+            tabsAdapter.notifyItemChanged(index + 1);
             updateToolbar();
         } else if (oldIndex != index) {
             tabNavigationHistory.push(oldIndex);
-            // Animate for reasonably small jumps, pop for very distant ones
-            boolean animate = Math.abs(oldIndex - index) <= 5;
-            viewPager.setCurrentItem(index, animate);
+            viewPager.setCurrentItem(index, true);
         }
-
-        // Delay drawer closing slightly to let the ViewPager transition take priority
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                drawerLayout.closeDrawers();
-            }
-        }, 100);
 
         fabDelete.hide();
     }
 
     @SuppressLint("NotifyDataSetChanged")
     private void hideEditor() {
+        if (viewPager.getVisibility() != View.VISIBLE || viewPager.getTranslationX() != 0) return;
+        
         int oldIndex = currentTabIndex;
-        viewPager.setVisibility(View.GONE);
-        classListContainer.setVisibility(View.VISIBLE);
-        updateToolbar();
+        float width = (float) getResources().getDisplayMetrics().widthPixels;
 
-        // Targeted updates for better performance
-        tabsAdapter.notifyItemChanged(0); // Update Home item selection
-        if (oldIndex != -1) {
-            tabsAdapter.notifyItemChanged(oldIndex + 1);
-        }
+        viewPager.animate().cancel();
+        classListContainer.animate().cancel();
+        
+        classListContainer.setVisibility(View.VISIBLE);
+        classListContainer.setTranslationX(-width * 0.2f);
+        
+        viewPager.animate()
+                .translationX(width)
+                .setDuration(280)
+                .setInterpolator(new DecelerateInterpolator(1.1f))
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        viewPager.setVisibility(View.GONE);
+                        viewPager.setTranslationX(0);
+                        updateToolbar();
+                        
+                        // Notify adapter AFTER visibility changes to GONE
+                        tabsAdapter.notifyItemChanged(0);
+                        if (oldIndex != -1) {
+                            tabsAdapter.notifyItemChanged(oldIndex + 1);
+                        }
+                    }
+                })
+                .start();
+        
+        classListContainer.animate()
+                .translationX(0)
+                .setDuration(280)
+                .setInterpolator(new DecelerateInterpolator(1.1f))
+                .start();
     }
 
     public EditorTab getTabForClassName(String className) {
@@ -1053,6 +1162,7 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     public void onContentModified(String className) {
+        needsModifiedTreeRebuild = true;
         for (int i = 0; i < tabs.size(); i++) {
             if (tabs.get(i).className.equals(className)) {
                 EditorFragment fragment = getFragmentAtIndex(i);
@@ -1075,14 +1185,19 @@ public class DexEditorActivity extends AppCompatActivity {
 
     private void saveCurrentTab() {
         final int index = viewPager.getCurrentItem();
-        saveTab(index, new Runnable() {
+        if (index < 0 || index >= tabs.size()) return;
+        final EditorTab tab = tabs.get(index);
+        saveTab(tab, new Runnable() {
             @Override
             public void run() {
-                SketchwareUtil.showMessage(DexEditorActivity.this, "Saved " + tabs.get(index).title);
+                SketchwareUtil.showMessage(DexEditorActivity.this, "Saved " + tab.title);
             }
         });
     }
 
+    // Compilation options when pressed the dex preference
+    // I know the smali libry support version 40 and 41 api
+    // but this smali library was newly lauched when I used never knew that there is  bugs releted to api
     private void showCompilationOptionsDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_compilation_options, null);
         Spinner spinnerDexVersion = dialogView.findViewById(R.id.spinner_dex_version);
@@ -1093,7 +1208,7 @@ public class DexEditorActivity extends AppCompatActivity {
         SwitchCompat swRemoveDebugPrologue = dialogView.findViewById(R.id.sw_remove_debug_prologue);
         SwitchCompat swRemoveDebugLocal = dialogView.findViewById(R.id.sw_remove_debug_local);
 
-        String[] versions = {"Keep the same", "35", "37", "38", "39"};
+        String[] versions = {"Keep the same", "35", "37", "38", "39"}; // upto 39 is okk
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, versions);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDexVersion.setAdapter(adapter);
@@ -1213,6 +1328,21 @@ public class DexEditorActivity extends AppCompatActivity {
         }, 500);
     }
 
+    public void removeTabsForClass(String name, boolean isDirectory) {
+        for (int i = tabs.size() - 1; i >= 0; i--) {
+            String tabClass = tabs.get(i).className;
+            if (isDirectory) {
+                if (tabClass.startsWith(name)) {
+                    removeTab(i);
+                }
+            } else {
+                if (tabClass.equals(name)) {
+                    removeTab(i);
+                }
+            }
+        }
+    }
+
     private boolean isCompilationOptionsActive() {
         return sessionOptions.removeAllDebug || sessionOptions.removeDebugSource ||
                 sessionOptions.removeDebugLine || sessionOptions.removeDebugParam ||
@@ -1289,8 +1419,8 @@ public class DexEditorActivity extends AppCompatActivity {
         final int finalTotalToSave = totalToSave;
         for (int i = 0; i < modifiedTabs.size(); i++) {
             if (checked[i]) {
-                final int indexInTabs = tabs.indexOf(modifiedTabs.get(i)); // get the modifed tab from map
-                saveTab(indexInTabs, new Runnable() { // save one after one
+                final EditorTab tab = modifiedTabs.get(i);
+                saveTab(tab, new Runnable() { // save one after one
                     @Override
                     public void run() {
                         synchronized (count) {
@@ -1306,10 +1436,14 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     // main method for saving tabs
-    // @index for the position of the tab , @onSaved used for proper task to detect if the savig completed or not
-    private void saveTab(final int index, final Runnable onSaved) {
-        final EditorTab tab = tabs.get(index);
-        final EditorFragment fragment = getFragmentAtIndex(index);
+    // @tab the tab to be saved, @onSaved used for proper task to detect if the saving completed or not
+    private void saveTab(final EditorTab tab, final Runnable onSaved) {
+        if (tab == null) {
+            if (onSaved != null) onSaved.run();
+            return;
+        }
+
+        final EditorFragment fragment = (EditorFragment) getSupportFragmentManager().findFragmentByTag("f" + tab.id);
         if (fragment == null) {
             if (onSaved != null) onSaved.run();
             return;
@@ -1329,10 +1463,14 @@ public class DexEditorActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             pd.dismiss();
-                            tab.isModified = false; // make false because we have saved it, but user again try to edit the calss thn this will again true
+                            tab.isModified = false; // make false because we have saved it, but user again try to edit the class then this will again true
                             tab.content = code;
-                            tabsAdapter.notifyItemChanged(index);
+                            int currentIndex = tabs.indexOf(tab);
+                            if (currentIndex != -1) {
+                                tabsAdapter.notifyItemChanged(currentIndex + 1); // Fixed index: home is at 0
+                            }
                             isChanged = true;
+                            needsModifiedTreeRebuild = true;
                             refreshExplorerPage(1);
                             handleUndoRedo();
                             if (onSaved != null) onSaved.run();
@@ -1367,6 +1505,7 @@ public class DexEditorActivity extends AppCompatActivity {
         methodRecyclerViewState = null;
         stringsRecyclerViewState = null;
 
+        // clear all tab data
         treeRoots.clear();
         historyNodes.clear();
         modifiedNodes.clear();
@@ -1439,23 +1578,26 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
+    // multiple fabs for slection of tree nodes
     private void initializeFab() {
         @SuppressLint("InflateParams") LinearLayout fabLayout = getLayoutInflater().inflate(R.layout.multiple_fabs, null).findViewById(R.id.linear_bg);
         fabBackground = fabLayout;
-        FloatingActionButton fabSelectRest = fabLayout.findViewById(R.id.fab_select_rest);
+        FloatingActionButton fabInvertSelect = fabLayout.findViewById(R.id.fab_select_rest);
         FloatingActionButton fabClear = fabLayout.findViewById(R.id.fab_clear);
         ((ViewGroup) fabLayout.getParent()).removeView(fabLayout);
         ((ViewGroup) fabDelete.getParent()).addView(fabLayout);
         fabClear.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
-        fabSelectRest.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
-        fabSelectRest.setOnClickListener(new View.OnClickListener() {
+        fabClear.setImageTintList(ColorStateList.valueOf(0xFFFFFFFF));
+        fabInvertSelect.setBackgroundTintList(ColorStateList.valueOf(0xFFBEBEC3));
+        fabInvertSelect.setImageTintList(ColorStateList.valueOf(0XFFFFFFFF));
+        fabInvertSelect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Fragment currentFragment = getSupportFragmentManager().findFragmentByTag("f" + (2000 + explorerViewPager.getCurrentItem()));
                 if (currentFragment instanceof ExplorerPageFragment) {
                     RecyclerView rv = ((ExplorerPageFragment) currentFragment).rv;
                     if (rv != null && rv.getAdapter() instanceof TreeAdapter) {
-                        ((TreeAdapter) rv.getAdapter()).selectAllRest();
+                        ((TreeAdapter) rv.getAdapter()).invertSelection();
                     }
                 }
             }
@@ -1478,7 +1620,7 @@ public class DexEditorActivity extends AppCompatActivity {
         showMultipleFabs(false);
     }
 
-    @Deprecated
+
     public float getDip(int dip) {
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dip, getResources().getDisplayMetrics());
     }
@@ -1502,6 +1644,13 @@ public class DexEditorActivity extends AppCompatActivity {
         } else {
             int nextIndex = Math.max(0, index - 1);
             viewPager.setCurrentItem(nextIndex, true);
+        }
+    }
+
+    private void removeTab(EditorTab tab) {
+        int index = tabs.indexOf(tab);
+        if (index != -1) {
+            removeTab(index);
         }
     }
 
@@ -1532,8 +1681,9 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     public static class ExplorerPageFragment extends Fragment {
-        RecyclerView rv;
+        FastScrollerRecyclerView rv;
         private int position;
+        private RecyclerView.Adapter<?> currentAdapter;
 
         public static ExplorerPageFragment newInstance(int position) {
             ExplorerPageFragment fragment = new ExplorerPageFragment();
@@ -1551,7 +1701,8 @@ public class DexEditorActivity extends AppCompatActivity {
 
         @Override
         public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            rv = new RecyclerView(requireContext());
+            rv = new FastScrollerRecyclerView(requireContext());
+            rv.setTrackVisible(false);
             rv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             rv.setLayoutManager(new LinearLayoutManager(getContext()));
             rv.setBackgroundColor(Color.WHITE);
@@ -1633,25 +1784,44 @@ public class DexEditorActivity extends AppCompatActivity {
             return null;
         }
 
+        @SuppressLint("NotifyDataSetChanged")
         public void updateUI() {
             if (rv == null) return;
             DexEditorActivity activity = (DexEditorActivity) getActivity();
             if (activity == null) return;
 
+            // Cache management: Force rebuild for History tab (case 1) because sections are dynamic
+            // For others (Explorer, Search, Strings), we can reuse the adapter for performance
+            // As I am using adapters in memory level reusing the same views will greatyly enhance the performance
+            // while sliding to chanage the adapter , it still lags some time , I will replace the usage with some new method SOME DAY.
+
+            if (position != 1 && currentAdapter != null) {
+                if (currentAdapter instanceof TreeAdapter) {
+                    ((TreeAdapter) currentAdapter).refreshVisibleNodes();
+                } else {
+                    currentAdapter.notifyDataSetChanged();
+                }
+                return;
+            }
+
             switch (position) {
                 case 0:
-                    rv.setAdapter(new TreeAdapter(getContext(), activity.treeRoots, new TreeAdapter.OnNodeClickListener() {
+                    currentAdapter = new TreeAdapter(getContext(), activity.treeRoots, new TreeAdapter.OnNodeClickListener() {
                         @Override
                         public void onNodeClick(TreeNode node) {
                             activity.openClass(node.getFullName());
                         }
 
+                        @SuppressLint("NotifyDataSetChanged")
                         @Override
                         public void onNodeDeleted(TreeNode node) {
                             activity.clearPositionSaving(node.getFullName());
+                            activity.removeTabsForClass(node.getFullName(), node.isDirectory());
                             classTree.removeClass(node.getFullName());
                             DexEditorActivity.isChanged = true;
+                            activity.needsModifiedTreeRebuild = true;
                             activity.refreshExplorerPage(1);
+                            activity.tabsAdapter.notifyDataSetChanged();
                         }
 
                         @Override
@@ -1660,12 +1830,39 @@ public class DexEditorActivity extends AppCompatActivity {
                             if (count > 0) activity.fabDelete.show();
                             else activity.fabDelete.hide();
                         }
-                    }, false));
+
+                        @Override
+                        public void onSearch(TreeNode node) {
+                            activity.pendingSearchPath = node.getFullName() + "/";
+                            activity.explorerViewPager.setCurrentItem(2);
+                        }
+                    }, false);
                     break;
                 case 1:
                     ConcatAdapter concatAdapter = new ConcatAdapter();
-                    if (!activity.historyNodes.isEmpty()) {
-                        concatAdapter.addAdapter(new HeaderAdapter("Recently"));
+                    boolean hasRecently = !activity.historyNodes.isEmpty();
+                    boolean hasModified = !activity.modifiedNodes.isEmpty();
+
+                    if (hasRecently) {
+                        concatAdapter.addAdapter(new HeaderAdapter("Recently", new HeaderAdapter.OnMenuClickListener() {
+                            @Override
+                            public void onMenuClick(View view) {
+                                PopupMenu popup = new PopupMenu(requireContext(), view);
+                                popup.getMenu().add("Clear all");
+                                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                                    @Override
+                                    public boolean onMenuItemClick(MenuItem item) {
+                                        if ("Clear all".contentEquals(Objects.requireNonNull(item.getTitle()))) {
+                                            activity.historyNodes.clear();
+                                            activity.refreshExplorerPage(1);
+                                            return true;
+                                        }
+                                        return false;
+                                    }
+                                });
+                                popup.show();
+                            }
+                        }));
                         concatAdapter.addAdapter(new TreeAdapter(getContext(), activity.historyNodes, new TreeAdapter.OnNodeClickListener() {
                             @Override
                             public void onNodeClick(TreeNode node) {
@@ -1686,12 +1883,18 @@ public class DexEditorActivity extends AppCompatActivity {
                             public void onLocate(TreeNode node) {
                                 activity.locateClass(node.getFullName());
                             }
+
+                            @Override
+                            public void onSearch(TreeNode node) {
+                                activity.pendingSearchPath = node.getFullName() + "/";
+                                activity.explorerViewPager.setCurrentItem(2);
+                            }
                         }, true));
                     }
 
-                    if (!activity.modifiedNodes.isEmpty()) {
+                    if (hasModified) {
                         concatAdapter.addAdapter(new HeaderAdapter("Modified"));
-                        concatAdapter.addAdapter(new TreeAdapter(getContext(), activity.modifiedNodes, new TreeAdapter.OnNodeClickListener() {
+                        concatAdapter.addAdapter(new TreeAdapter(requireContext(), activity.modifiedNodes, new TreeAdapter.OnNodeClickListener() {
                             @Override
                             public void onNodeClick(TreeNode node) {
                                 activity.openClass(node.getFullName());
@@ -1710,15 +1913,25 @@ public class DexEditorActivity extends AppCompatActivity {
                             }
 
                             @Override
+                            public void onSearch(TreeNode node) {
+                                activity.pendingSearchPath = node.getFullName() + "/";
+                                activity.explorerViewPager.setCurrentItem(2);
+                            }
+
+                            @Override
                             public void onCompare(TreeNode node) {
                                 // TODO: Implement compare the difference
                             }
                         }, false, true));
                     }
-                    rv.setAdapter(concatAdapter);
+                    
+                    if (!hasRecently && !hasModified) {
+                        // Empty state: optionally add a placeholder or just set currentAdapter
+                    }
+                    currentAdapter = concatAdapter;
                     break;
                 case 2:
-                    rv.setAdapter(new TreeAdapter(getContext(), activity.searchNodes, new TreeAdapter.OnNodeClickListener() {
+                    currentAdapter = new TreeAdapter(getContext(), activity.searchNodes, new TreeAdapter.OnNodeClickListener() {
                         @Override
                         public void onNodeClick(TreeNode node) {
                             activity.openClass(node.getFullName());
@@ -1737,18 +1950,20 @@ public class DexEditorActivity extends AppCompatActivity {
                         public void onLocate(TreeNode node) {
                             activity.locateClass(node.getFullName());
                         }
-                    }, true));
+                    }, true);
                     break;
                 case 3:
-                    rv.setAdapter(new modder.hub.dexeditor.adapter.StringAdapter(activity.stringList, new modder.hub.dexeditor.adapter.StringAdapter.OnStringClickListener() {
+                    currentAdapter = new StringAdapter(activity.stringList, new modder.hub.dexeditor.adapter.StringAdapter.OnStringClickListener() {
                         @Override
                         public void onStringClick(String text) {
                             // TO-DO
                         }
-                    }));
+                    });
                     break;
             }
-            new FastScrollerBuilder(rv).build();
+            if (currentAdapter != null) {
+                rv.setAdapter(currentAdapter);
+            }
         }
     }
 
@@ -1802,8 +2017,12 @@ public class DexEditorActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
-                            treeRoots = roots;
-                            modifiedNodes = modified;
+                            treeRoots.clear();
+                            treeRoots.addAll(roots);
+                            modifiedNodes.clear();
+                            modifiedNodes.addAll(modified);
+                            needsModifiedTreeRebuild = false;
+                            // update toolbar
                             updateToolbar();
                             refreshExplorerPage(0);
                             showTreeView();
@@ -1835,7 +2054,7 @@ public class DexEditorActivity extends AppCompatActivity {
 
         private void showErrorDialog(final Exception e) {
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(DexEditorActivity.this);
-            builder.setTitle("DEX Loading Error");
+            builder.setTitle(getString(R.string.error));
             builder.setMessage("Failed to process DEX files:\n\n" + e.getMessage());
             builder.setPositiveButton("Go Back", new DialogInterface.OnClickListener() {
                 @Override
@@ -1855,7 +2074,7 @@ public class DexEditorActivity extends AppCompatActivity {
         public void onClick(DialogInterface dialogInterface, int i) {
             final AlertProgress alertProgress = new AlertProgress(DexEditorActivity.this);
             alertProgress.setTitle("Processing...");
-            alertProgress.setMessage("Compiling...");
+            alertProgress.setMessage("...");
             alertProgress.setOnCancelListener(new modder.hub.dexeditor.views.AlertProgress.OnCancelListener() {
                 @Override
                 public void onCancel() {
@@ -1992,6 +2211,20 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
+    private void reduceDragSensitivity(ViewPager2 viewPager) {
+        try {
+            java.lang.reflect.Field recyclerViewField = ViewPager2.class.getDeclaredField("mRecyclerView");
+            recyclerViewField.setAccessible(true);
+            RecyclerView recyclerView = (RecyclerView) recyclerViewField.get(viewPager);
+
+            java.lang.reflect.Field touchSlopField = RecyclerView.class.getDeclaredField("mTouchSlop");
+            touchSlopField.setAccessible(true);
+            int touchSlop = (int) touchSlopField.get(recyclerView);
+            touchSlopField.set(recyclerView, touchSlop * 2);
+        } catch (Exception ignored) {
+        }
+    }
+
     // batch class deletion function
     private class DeleteButtonClickListener implements View.OnClickListener {
         @Override
@@ -2017,9 +2250,18 @@ public class DexEditorActivity extends AppCompatActivity {
                                     String fullName = node.getFullName();
                                     namesToDelete.add(fullName + (node.isDirectory() ? "/" : ""));
                                     posManager.removePosition(fullName);
+                                    final String nameForTabRemoval = fullName;
+                                    final boolean isDirForTabRemoval = node.isDirectory();
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            removeTabsForClass(nameForTabRemoval, isDirForTabRemoval);
+                                        }
+                                    });
                                 }
                                 classTree.removeClasses(namesToDelete);
                                 runOnUiThread(new Runnable() {
+                                    @SuppressLint("NotifyDataSetChanged")
                                     @Override
                                     public void run() {
                                         adapter.removeSelectedNodes();
@@ -2027,7 +2269,9 @@ public class DexEditorActivity extends AppCompatActivity {
                                         showMultipleFabs(false);
                                         fabDelete.hide();
                                         isChanged = true;
+                                        needsModifiedTreeRebuild = true;
                                         refreshExplorerPage(1);
+                                        tabsAdapter.notifyDataSetChanged();
                                     }
                                 });
                             }
@@ -2082,6 +2326,62 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
+    private void setupDrawerToolbar() {
+        drawerToolbar.getMenu().add(0, 0, 0, "Close other");
+        drawerToolbar.getMenu().add(0, 1, 0, "Close all");
+        drawerToolbar.getMenu().add(0, 2, 0, "Close unmodified");
+        drawerToolbar.getMenu().add(0, 3, 0, "Close above");
+        drawerToolbar.getMenu().add(0, 4, 0, "Close below");
+
+        drawerToolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                int index = currentTabIndex;
+                switch (item.getItemId()) {
+                    case 0: // Close other
+                        if (index != -1) tabsAdapter.closeOtherTabs(index);
+                        break;
+                    case 1: // Close all
+                        tabsAdapter.closeAllTabs();
+                        break;
+                    case 2: // Close unmodified
+                        tabsAdapter.closeUnmodifiedTabs();
+                        break;
+                    case 3: // Close above
+                        if (index != -1) tabsAdapter.closeTabsAbove(index);
+                        break;
+                    case 4: // Close below
+                        if (index != -1) tabsAdapter.closeTabsBelow(index);
+                        break;
+                }
+                return true;
+            }
+        });
+    }
+
+    private void updateDrawerMenuState() {
+        Menu menu = drawerToolbar.getMenu();
+        int index = currentTabIndex;
+        int count = tabs.size();
+
+        menu.findItem(0).setEnabled(index != -1 && count > 1);
+        menu.findItem(1).setEnabled(count > 0);
+        menu.findItem(2).setEnabled(count > 0);
+        
+        MenuItem closeAbove = menu.findItem(3);
+        closeAbove.setEnabled(index > 0);
+        UIHelper.setMenuItemColor(closeAbove, closeAbove.isEnabled() ? Color.BLACK : Color.GRAY);
+
+        MenuItem closeBelow = menu.findItem(4);
+        closeBelow.setEnabled(index != -1 && index < count - 1);
+        UIHelper.setMenuItemColor(closeBelow, closeBelow.isEnabled() ? Color.BLACK : Color.GRAY);
+        
+        // Also update other items color if needed
+        UIHelper.setMenuItemColor(menu.findItem(0), menu.findItem(0).isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(1), menu.findItem(1).isEnabled() ? Color.BLACK : Color.GRAY);
+        UIHelper.setMenuItemColor(menu.findItem(2), menu.findItem(2).isEnabled() ? Color.BLACK : Color.GRAY);
+    }
+
     public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.ViewHolder> {
         private int swipedPosition = -1;
 
@@ -2113,13 +2413,13 @@ public class DexEditorActivity extends AppCompatActivity {
                 holder.mainView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        drawerLayout.closeDrawers();
+                        drawerLayout.closeDrawer(GravityCompat.START);
                         v.postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 hideEditor();
                             }
-                        }, 200);
+                        }, 250);
                     }
                 });
                 holder.menuView.setVisibility(View.GONE);
@@ -2128,11 +2428,16 @@ public class DexEditorActivity extends AppCompatActivity {
                 int tabIndex = position - 1;
                 EditorTab tab = tabs.get(tabIndex);
                 isSelected = (viewPager.getVisibility() == View.VISIBLE && tabIndex == currentTabIndex);
-                holder.title.setText(tab.title + (tab.isModified ? " *" : "")); // highlight the spcific edited classes with star
+                holder.title.setText((tab.isModified ? "*" : "") + tab.title); // highlight the spcific edited classes with star
                 holder.title.setTextColor(isSelected ? skyColor : Color.BLACK);
+                
                 holder.path.setVisibility(View.VISIBLE);
                 holder.path.setText(tab.className);
-                holder.icon.setImageResource(R.drawable.ic_edit_mt);
+                if (tab.type == 1) {
+                    holder.icon.setImageResource(R.drawable.ic_java_mt);
+                } else {
+                    holder.icon.setImageResource(R.drawable.ic_edit_mt);
+                }
                 holder.icon.setImageTintList(ColorStateList.valueOf(isSelected ? skyColor : Color.BLACK));
 
                 holder.mainView.setOnClickListener(new View.OnClickListener() {
@@ -2143,13 +2448,17 @@ public class DexEditorActivity extends AppCompatActivity {
                             swipedPosition = -1;
                             return;
                         }
-                        drawerLayout.closeDrawers();
+                        
+                        // Close drawer first for smoother animation
+                        drawerLayout.closeDrawer(GravityCompat.START);
+                        
+                        // Delay the switch slightly so the animation starts smoothly
                         v.postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 showEditor(tabIndex);
                             }
-                        }, 200);
+                        }, 250);
                     }
                 });
 
@@ -2157,6 +2466,7 @@ public class DexEditorActivity extends AppCompatActivity {
                     private float startX;
                     private float initialX;
                     private boolean isDragging = false;
+                    private final int touchSlop = android.view.ViewConfiguration.get(getApplicationContext()).getScaledTouchSlop();
 
                     @SuppressLint("ClickableViewAccessibility")
                     @Override
@@ -2169,7 +2479,7 @@ public class DexEditorActivity extends AppCompatActivity {
                                 break;
                             case MotionEvent.ACTION_MOVE:
                                 float diff = event.getRawX() - initialX;
-                                if (Math.abs(diff) > 10 || isDragging) {
+                                if (Math.abs(diff) > touchSlop || isDragging) {
                                     isDragging = true;
                                     v.setTranslationX(Math.max(0, Math.min(startX + diff, swipeWidth)));
                                     v.getParent().requestDisallowInterceptTouchEvent(true);
@@ -2213,6 +2523,45 @@ public class DexEditorActivity extends AppCompatActivity {
                 });
             }
             holder.mainView.setBackgroundColor(isSelected ? Color.parseColor("#E1F5FE") : Color.WHITE);
+        }
+
+        public void closeOtherTabs(int index) {
+            for (int i = tabs.size() - 1; i >= 0; i--) {
+                if (i != index) {
+                    closeTab(i);
+                }
+            }
+            updateDrawerMenuState();
+        }
+
+        public void closeAllTabs() {
+            for (int i = tabs.size() - 1; i >= 0; i--) {
+                closeTab(i);
+            }
+            updateDrawerMenuState();
+        }
+
+        public void closeUnmodifiedTabs() {
+            for (int i = tabs.size() - 1; i >= 0; i--) {
+                if (!tabs.get(i).isModified) {
+                    closeTab(i);
+                }
+            }
+            updateDrawerMenuState();
+        }
+
+        public void closeTabsAbove(int index) {
+            for (int i = index - 1; i >= 0; i--) {
+                closeTab(i);
+            }
+            updateDrawerMenuState();
+        }
+
+        public void closeTabsBelow(int index) {
+            for (int i = tabs.size() - 1; i > index; i--) {
+                closeTab(i);
+            }
+            updateDrawerMenuState();
         }
 
         @Override
