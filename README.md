@@ -5,41 +5,46 @@ A work-in-progress multifunctional advanced *Android **DEX** file editor* for An
 - [JADX](https://github.com/skylot/jadx)
 
 ## Available features 
+- [x] Dex Smali classes TreeView
 - [x] Smali navigation (methods, fields and strings list)
 - [x] Decompile single smali classes 
 - [x] Decompiling single smali method bodies to java
 - [x] Batch class deletion
 - [x] Smali method flow diagram
 - [x] Editing Smali with best code editor
+- [x] Batch class editor and navigator
+- [x] Multi dex loader and compiler
+- [x] Smali full fetured search and replacement with all type search methods
 - [x] Jump to another class
+- [x] Smali compilation options
+- [x] Strings list tab
 - [x] Jump to smali lables (cond, try_catch etc.) within method body
 - [x] Custom editor selection menu (Calling translation apps)
-- [x] Dex compilation with real time progress update
+- [x] Faster Dex compilation with real time progress update
 - [x] Supported propper error handling during smali compilation 
 - [x] Enhancement in smali library
 - [x] Full featured Smali Editor 
 - [x] Supported DEX version 40 and 41(Partially)
 - [x] Working on android api 21 (only my build apk)
 ## To-Do
-- [x] Multi Dex Support
-- [ ] New Java decompilers
-- [ ] Multi smali class editor
-- [ ] Removing debug items
 - [ ] Batch Insertion and extraction of classes
-## Project build by 
+- [ ] Direct class renamer
+## Project build with
 - [Sketchware Pro](https://github.com/Sketchware-Pro/Sketchware-Pro) , Java 11 version
+- Android Studio
   ### Download sample app
   [Dex Editor +](https://github.com/developer-krushna/Dex-Editor-Android/releases/tag/v1.3_final)
 ## Watch a quick video
 https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186-e789-44f6-bdc3-180fc3e3e0c9
 ## Special thanks to
+- MT Manager Developer (All logics and UIs idea copied from MT Manager)
 - [Timscriptov](https://github.com/timscriptov) for helping me in the development of Smali method flow diagram and also thanks for making server rest api ..I am really indebted to him ♥️
 
 - [Sora-Editor] for a beautiful Android TextEditor (https://github.com/Rosemoe/sora-editor)
 
 - Thanks to [Android Prime](https://github.com/abodinagdat16) for helping me a lot in sora editor functionalities
 
-## This project already used in My Project Modder Hub
+## Download Modder Hub
 - [Download Modder Hub](https://modder-hub.blogspot.com)
 
 ## Join Telegram
@@ -55,7 +60,7 @@ This project is released under the Apache License, Version 2.0. However, please 
 For more details on the license terms and usage restrictions, please refer to the LICENSE file.
 
 # License
-    Copyright (C) 2024-25 Krushna Chandra
+    Copyright (C) 2024-26 Krushna Chandra
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
