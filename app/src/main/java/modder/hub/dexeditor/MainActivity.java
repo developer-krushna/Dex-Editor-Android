@@ -196,13 +196,7 @@ public class MainActivity extends AppCompatActivity implements FilePermissionMan
             }
         });
 
-        openDexFileButton.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                // Handle long click if needed
-                return true;
-            }
-        });
+    
 
         openDexFileButton.setOnClickListener(new View.OnClickListener() {
             @Override
