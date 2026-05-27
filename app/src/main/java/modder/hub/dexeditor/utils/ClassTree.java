@@ -37,6 +37,8 @@ package modder.hub.dexeditor.utils;
 
 import android.annotation.SuppressLint;
 
+import androidx.annotation.NonNull;
+
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.formatter.BaksmaliWriter;
@@ -61,6 +63,7 @@ import com.android.tools.smali.smali2.Smali;
 import com.android.tools.smali.dexlib2.util.DexUtil;
 import com.android.tools.smali.dexlib2.writer.builder.DexBuilder;
 import com.android.tools.smali.dexlib2.writer.io.MemoryDataStore;
+import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -74,7 +77,6 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -87,6 +89,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ExecutorService;
@@ -109,15 +112,14 @@ public class ClassTree {
      faster batch class deletion and even really  fatser dex compilatin .
 
      * There is so many usefull tricks for advancing your smali assembly and disaembly knowledge
-     * Here i have made significant improvement in loading of dexes
+     * Here I have made significant improvement in loading/ compiling/ editing of dexes
      */
 
 
     private String ALL_CLASSES_JSON;
     private String DELETED_CLASSES_JSON;
     private String EDITED_CLASSES_JSON;
-    private String workDir;
-    private final Map<String, List<String>> removedClassMap = new HashMap<>();
+    private final String workDir;
     private final Map<String, java.util.HashSet<String>> editedClassMap = new HashMap<>();
     private final Map<String, String> pendingSmaliMap = new HashMap<>();
     public Tree tree;
@@ -129,7 +131,7 @@ public class ClassTree {
     public int dep;
     public Stack<String> path;
     public String curFile;
-    public List<ClassDef> classDefList = new ArrayList<ClassDef>();
+    public final List<ClassDef> classDefList = new ArrayList<ClassDef>();
     public List<String> paths;
     public int dexVersion;
     Map<String, List<String>> dexClassMap = new LinkedHashMap<>();
@@ -188,8 +190,11 @@ public class ClassTree {
         dexFiles = new ArrayList<>();
         classDefList.clear();
         typeToDexMap.clear();
-        if (classMap == null) classMap = new HashMap<>();
-        else classMap.clear();
+        if (classMap == null) {
+            classMap = new HashMap<>();
+        } else {
+            classMap.clear();
+        }
 
         for (int i = 0; i < paths.size(); i++) {
             String path = paths.get(i);
@@ -220,7 +225,7 @@ public class ClassTree {
         // initClassMap() is now integrated into the loop above
     }
 
-    // save all classes during loading of initial dexes
+    // save all classes names in JSON during loading of initial dexes
     private void saveAllClassesJson() throws IOException {
         File file = new File(ALL_CLASSES_JSON);
         if (file.exists()) {
@@ -243,7 +248,7 @@ public class ClassTree {
                 Map<String, List<String>> loaded = new Gson().fromJson(json, new TypeToken<Map<String, List<String>>>() {}.getType());
                 deletedClassJson.clear();
                 for (Entry<String, List<String>> entry : loaded.entrySet()) {
-                    deletedClassJson.put(entry.getKey(), new java.util.HashSet<>(entry.getValue()));
+                    deletedClassJson.put(entry.getKey(), new HashSet<>(entry.getValue()));
                 }
             } else {
                 deletedClassJson = new HashMap<>();
@@ -261,10 +266,10 @@ public class ClassTree {
                 file.delete();
             }
 
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            Gson gson = new GsonBuilder().create();
             // Convert HashSet to List for JSON
             Map<String, List<String>> toSave = new HashMap<>();
-            for (Entry<String, java.util.HashSet<String>> entry : deletedClassJson.entrySet()) {
+            for (Entry<String, HashSet<String>> entry : deletedClassJson.entrySet()) {
                 toSave.put(entry.getKey(), new ArrayList<>(entry.getValue()));
             }
             String json = gson.toJson(toSave);
@@ -304,22 +309,54 @@ public class ClassTree {
     public void removeClasses(List<String> classNames) {
         if (classNames == null || classNames.isEmpty()) return;
 
+        List<String> folderPrefixes = new ArrayList<String>();
+        Set<String> individualClasses = new HashSet<String>();
+
         for (String name : classNames) {
             if (name.endsWith("/")) {
-                // It's a folder, remove all classes starting with this path
-                Iterator<String> it = classMap.keySet().iterator();
-                while (it.hasNext()) {
-                    String key = it.next();
-                    if (key.startsWith(name)) {
-                        recordRemovedClass(key);
-                        it.remove();
+                folderPrefixes.add(name);
+            } else {
+                individualClasses.add(name);
+            }
+        }
+
+        // Optimization: Use a single pass over the map when folders are involved (O(N))
+        if (!folderPrefixes.isEmpty()) {
+            Iterator<Map.Entry<String, ClassDef>> it = classMap.entrySet().iterator();
+            while (it.hasNext()) {
+                String className = it.next().getKey();
+                if (shouldRemove(className, individualClasses, folderPrefixes)) {
+                    recordRemovedClass(className);
+                    it.remove();
+                    pendingSmaliMap.remove(className);
+                    unrecordEditedClass(className);
+                }
+            }
+
+            // Cleanup for classes that might only exist in edited maps
+            for (HashSet<String> set : editedClassMap.values()) {
+                Iterator<String> setIt = set.iterator();
+                while (setIt.hasNext()) {
+                    if (shouldRemove(setIt.next(), individualClasses, folderPrefixes)) {
+                        setIt.remove();
                     }
                 }
-            } else {
-                // It's a single class
+            }
+
+            Iterator<String> pendingIt = pendingSmaliMap.keySet().iterator();
+            while (pendingIt.hasNext()) {
+                if (shouldRemove(pendingIt.next(), individualClasses, folderPrefixes)) {
+                    pendingIt.remove();
+                }
+            }
+        } else {
+            // High-performance path for individual class removals (O(1) lookups)
+            for (String name : individualClasses) {
                 if (classMap.remove(name) != null) {
                     recordRemovedClass(name);
                 }
+                pendingSmaliMap.remove(name);
+                unrecordEditedClass(name);
             }
         }
 
@@ -327,12 +364,20 @@ public class ClassTree {
         saveDeletedClasses();
     }
 
-    // remove single class only
-    public void removeClass(String className) {
-        removeClasses(Collections.singletonList(className));
+    private boolean shouldRemove(String className, Set<String> individualClasses, List<String> folderPrefixes) {
+        if (individualClasses.contains(className)) return true;
+        for (String prefix : folderPrefixes) {
+            if (className.startsWith(prefix)) return true;
+        }
+        return false;
     }
 
-    // the remove classes will be recorded during batch
+    // remove single class only
+    public void removeClass(String className) {
+        removeClasses(ImmutableList.of(className));
+    }
+
+    // the remove classes will be recorded during batch and preserve in json
     private void recordRemovedClass(String type) {
         String fileName = typeToDexMap.get("L" + type + ";");
         if (fileName != null) {
@@ -346,7 +391,7 @@ public class ClassTree {
     }
 
     // save smali according to the class and its content
-    // its just a mapping way preserve smali data but it's not a good way and mt manager never do like this
+    // it's just a mapping way to preserve  smali data in memeory, but it's not a good way it may cause self kill app like situation and mt manager never do like this
     public void saveSmali(String type, String smali) {
         pendingSmaliMap.put(type, smali);
         recordEditedClass(type);
@@ -355,7 +400,7 @@ public class ClassTree {
     }
 
     // save class def to the main node o the dex and record the changes classes
-    public void saveClassDef(ClassDef classDef) throws Exception {
+    public void saveClassDef(ClassDef classDef) {
         String type = classDef.getType().substring(1, classDef.getType().length() - 1);
         pendingSmaliMap.remove(type);
 
@@ -410,19 +455,15 @@ public class ClassTree {
         return stringWriter.toString();
     }
 
-    public String getSmaliFromClassDef(ClassDef classDef) throws Exception {
-        return getSmaliByType(classDef);
-    }
-
     public String findDexFileNameForClass(ClassDef classDef) {
         String fileName = typeToDexMap.get(classDef.getType());
-        return fileName != null ? fileName : "unknown.dex";
+        if (fileName != null) {
+            return fileName;
+        }
+        return "unknown.dex";
     }
 
-    public Map<String, String> getTypeToDexMap() {
-        return typeToDexMap;
-    }
-
+    // record the edited classes
     private void recordEditedClass(String type) {
         String fileName = typeToDexMap.get("L" + type + ";");
         if (fileName != null) {
@@ -435,136 +476,18 @@ public class ClassTree {
         }
     }
 
-    private class DebugInfoStripper implements com.android.tools.smali.dexlib2.iface.ClassDef {
-        private final ClassDef delegate;
-        private final CompilationOptions options;
-
-        public DebugInfoStripper(ClassDef delegate, CompilationOptions options) {
-            this.delegate = delegate;
-            this.options = options;
-        }
-
-        @Override @javax.annotation.Nonnull public String getType() { return delegate.getType(); }
-        @Override public int getAccessFlags() { return delegate.getAccessFlags(); }
-        @Override @javax.annotation.Nullable public String getSuperclass() { return delegate.getSuperclass(); }
-        @Override @javax.annotation.Nonnull public List<String> getInterfaces() { return delegate.getInterfaces(); }
-        @Override @javax.annotation.Nullable public String getSourceFile() { return options.removeDebugSource || options.removeAllDebug ? null : delegate.getSourceFile(); }
-        @Override @javax.annotation.Nonnull public Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> getAnnotations() { return delegate.getAnnotations(); }
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getStaticFields() { return delegate.getStaticFields(); }
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getInstanceFields() { return delegate.getInstanceFields(); }
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getFields() { return delegate.getFields(); }
-
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getDirectMethods() {
-            return wrapMethods(delegate.getDirectMethods());
-        }
-
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getVirtualMethods() {
-            return wrapMethods(delegate.getVirtualMethods());
-        }
-
-        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getMethods() {
-            return wrapMethods(delegate.getMethods());
-        }
-
-        @Override public int compareTo(@javax.annotation.Nonnull CharSequence o) { return delegate.compareTo(o); }
-        @Override public void validateReference() throws com.android.tools.smali.dexlib2.iface.reference.Reference.InvalidReferenceException { delegate.validateReference(); }
-        @Override public int length() { return delegate.length(); }
-        @Override public char charAt(int index) { return delegate.charAt(index); }
-        @Override public CharSequence subSequence(int start, int end) { return delegate.subSequence(start, end); }
-        @Override @javax.annotation.Nonnull public String toString() { return delegate.toString(); }
-
-        private Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> wrapMethods(Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> methods) {
-            List<com.android.tools.smali.dexlib2.iface.Method> wrapped = new ArrayList<>();
-            for (com.android.tools.smali.dexlib2.iface.Method method : methods) {
-                wrapped.add(new MethodStripper(method, options));
+    private void unrecordEditedClass(String type) {
+        String fileName = typeToDexMap.get("L" + type + ";");
+        if (fileName != null) {
+            HashSet<String> edited = editedClassMap.get(fileName);
+            if (edited != null) {
+                edited.remove(type);
             }
-            return wrapped;
         }
     }
 
-    private class MethodStripper implements com.android.tools.smali.dexlib2.iface.Method {
-        private final com.android.tools.smali.dexlib2.iface.Method delegate;
-        private final CompilationOptions options;
-
-        public MethodStripper(com.android.tools.smali.dexlib2.iface.Method delegate, CompilationOptions options) {
-            this.delegate = delegate;
-            this.options = options;
-        }
-
-        @Override @javax.annotation.Nonnull public String getDefiningClass() { return delegate.getDefiningClass(); }
-        @Override @javax.annotation.Nonnull public String getName() { return delegate.getName(); }
-        @Override @javax.annotation.Nonnull public List<? extends com.android.tools.smali.dexlib2.iface.MethodParameter> getParameters() { 
-            if (options.removeDebugParam || options.removeAllDebug) {
-                List<com.android.tools.smali.dexlib2.iface.MethodParameter> params = new ArrayList<>();
-                for (com.android.tools.smali.dexlib2.iface.MethodParameter p : delegate.getParameters()) {
-                    params.add(new com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter(p.getType(), null, null));
-                }
-                return params;
-            }
-            return delegate.getParameters(); 
-        }
-        @Override @javax.annotation.Nonnull public List<? extends CharSequence> getParameterTypes() { return delegate.getParameterTypes(); }
-        @Override @javax.annotation.Nonnull public String getReturnType() { return delegate.getReturnType(); }
-        @Override public int getAccessFlags() { return delegate.getAccessFlags(); }
-        @Override @javax.annotation.Nonnull public Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> getAnnotations() { return delegate.getAnnotations(); }
-        @Override @javax.annotation.Nonnull public Set<com.android.tools.smali.dexlib2.HiddenApiRestriction> getHiddenApiRestrictions() { return delegate.getHiddenApiRestrictions(); }
-        @Override @javax.annotation.Nullable public com.android.tools.smali.dexlib2.iface.MethodImplementation getImplementation() {
-            com.android.tools.smali.dexlib2.iface.MethodImplementation impl = delegate.getImplementation();
-            if (impl == null) return null;
-            return new MethodImplementationStripper(impl, options);
-        }
-        @Override public int compareTo(@javax.annotation.Nonnull com.android.tools.smali.dexlib2.iface.reference.MethodReference o) { return delegate.compareTo(o); }
-        @Override public void validateReference() throws com.android.tools.smali.dexlib2.iface.reference.Reference.InvalidReferenceException { delegate.validateReference(); }
-    }
-
-    private class MethodImplementationStripper implements com.android.tools.smali.dexlib2.iface.MethodImplementation {
-        private final com.android.tools.smali.dexlib2.iface.MethodImplementation delegate;
-        private final CompilationOptions options;
-
-        public MethodImplementationStripper(com.android.tools.smali.dexlib2.iface.MethodImplementation delegate, CompilationOptions options) {
-            this.delegate = delegate;
-            this.options = options;
-        }
-
-        @Override public int getRegisterCount() { return delegate.getRegisterCount(); }
-        @Override public Iterable<? extends com.android.tools.smali.dexlib2.iface.instruction.Instruction> getInstructions() { return delegate.getInstructions(); }
-        @Override public List<? extends com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler>> getTryBlocks() { return delegate.getTryBlocks(); }
-
-        @Override public Iterable<? extends com.android.tools.smali.dexlib2.iface.debug.DebugItem> getDebugItems() {
-            if (options.removeAllDebug) return new ArrayList<>();
-            List<com.android.tools.smali.dexlib2.iface.debug.DebugItem> filtered = new ArrayList<>();
-            for (com.android.tools.smali.dexlib2.iface.debug.DebugItem item : delegate.getDebugItems()) {
-                boolean remove = false;
-                switch (item.getDebugItemType()) {
-                    case com.android.tools.smali.dexlib2.DebugItemType.SET_SOURCE_FILE:
-                        if (options.removeDebugSource) remove = true;
-                        break;
-                    case com.android.tools.smali.dexlib2.DebugItemType.LINE_NUMBER:
-                        if (options.removeDebugLine) remove = true;
-                        break;
-                    case com.android.tools.smali.dexlib2.DebugItemType.PROLOGUE_END:
-                        if (options.removeDebugPrologue) remove = true;
-                        break;
-                    case com.android.tools.smali.dexlib2.DebugItemType.EPILOGUE_BEGIN:
-                        // Prologue option usually covers epilogue too in some tools, or we can map it
-                        if (options.removeDebugPrologue) remove = true;
-                        break;
-                    case com.android.tools.smali.dexlib2.DebugItemType.START_LOCAL:
-                    case com.android.tools.smali.dexlib2.DebugItemType.END_LOCAL:
-                    case com.android.tools.smali.dexlib2.DebugItemType.RESTART_LOCAL:
-                    case com.android.tools.smali.dexlib2.DebugItemType.START_LOCAL_EXTENDED:
-                        if (options.removeDebugLocal) remove = true;
-                        break;
-                }
-                if (!remove) filtered.add(item);
-            }
-            // Param debug info is usually handled via method parameters if we want to strip names,
-            // but in debug_info_item they are also present. 
-            // dexlib2 doesn't easily expose the parameter names list from debug_info_item here.
-            return filtered;
-        }
-    }
-
+    // save all loaded dexes
+    @SuppressLint("SdCardPath")
     public void saveAllDexFiles(DexSaveProgress dexSaveProgress) throws Exception {
         if (dexClassMap == null || dexClassMap.isEmpty()) return;
 
@@ -617,19 +540,23 @@ public class ClassTree {
                         try {
                             final String type = rawType.substring(1, rawType.length() - 1);
 
-                            if (deletedClassJson.containsKey(fileName) && deletedClassJson.get(fileName).contains(type)) {
+                            if (deletedClassJson.containsKey(fileName) && Objects.requireNonNull(deletedClassJson.get(fileName)).contains(type)) {
                                 int p = processed.incrementAndGet();
-                                if (p % 100 == 0 || p == classCount) dexSaveProgress.onProgress(p, classCount);
+                                if (p % 100 == 0 || p == classCount) {
+                                    dexSaveProgress.onProgress(p, classCount);
+                                }
                                 return;
                             }
 
                             if (pendingSmaliMap.containsKey(type)) {
                                 // Message update is tricky in parallel, but we can do it occasionally
-                                if (processed.get() % 50 == 0) dexSaveProgress.onMessage("Assembling " + type + "...");
+                                if (processed.get() % 50 == 0) {
+                                    dexSaveProgress.onMessage("Assembling " + type + "...");
+                                }
                                 
                                 try {
                                     final ClassDef assembledDef = Smali.assemble(pendingSmaliMap.get(type), new SmaliOptions(), finalTargetDexVersion);
-                                    synchronized (classMap) {
+                                    synchronized (Collections.unmodifiableMap(classMap)) {
                                         classMap.put(type, assembledDef);
                                     }
                                     synchronized (pendingSmaliMap) {
@@ -646,14 +573,15 @@ public class ClassTree {
                                         }
                                     }
                                 } catch (final Exception e) {
-                                    synchronized (threadException) { threadException[0] = new Exception("COMPILE_ERROR:" + type + ":" + e.getMessage()); }
+                                    synchronized (threadException) {
+                                        threadException[0] = new Exception("COMPILE_ERROR:" + type + ":" + e.getMessage()); }
                                 }
                             }
 
                             if (threadException[0] != null) return;
 
                             final ClassDef classDef;
-                            synchronized (classMap) {
+                            synchronized (Collections.unmodifiableMap(classMap)) {
                                 classDef = classMap.get(type);
                             }
                             
@@ -670,7 +598,10 @@ public class ClassTree {
                             }
                             
                             int p = processed.incrementAndGet();
-                            if (p % 100 == 0 || p == classCount) dexSaveProgress.onProgress(p, classCount);
+                            dexSaveProgress.onMessage("Compiling...");
+                            if (p % 100 == 0 || p == classCount) {
+                                dexSaveProgress.onProgress(p, classCount);
+                            }
                         } catch (final Exception e) {
                             synchronized (threadException) { threadException[0] = e; }
                         }
@@ -692,7 +623,12 @@ public class ClassTree {
                 dexBuilder.writeTo(memoryDataStore);
                 byte[] result = Arrays.copyOf(memoryDataStore.getBuffer(), memoryDataStore.getSize());
 
-                String outputDir = (paths != null && !paths.isEmpty()) ? new File(paths.get(0)).getParent() : "/sdcard";
+                String outputDir;
+                if (paths != null && !paths.isEmpty()) {
+                    outputDir = new File(paths.get(0)).getParent();
+                } else {
+                    outputDir = "/sdcard";
+                }
                 File outFile = new File(outputDir, fileName);
                 File bakFile = new File(outFile.getAbsolutePath() + ".bak");
 
@@ -718,35 +654,12 @@ public class ClassTree {
         DexEditorActivity.isSaved = true;
     }
 
-    public ArrayList<String> getList(String dir) {
-        if (dir.equals("/")) {
-            initClassMap();
-            return tree.list();
-        }
-
-        if (dir.equals("../")) {
-            tree.pop();
-            return tree.list();
-        }
-
-        if (!dir.endsWith("/") && !dir.equals("/")) {
-            dir += "/";
-        }
-
-        tree.push(dir);
-        return tree.list();
-    }
-
-    public void setCurrnetClass(String className) {
-        curClassDef = classMap.get(className);
-    }
-
     public List<TreeNode> buildFullTree() {
         Map<String, TreeNode> allNodes = new HashMap<>();
         List<TreeNode> roots = new ArrayList<>();
 
         List<String> sortedKeys = new ArrayList<>(classMap.keySet());
-        java.util.Collections.sort(sortedKeys);
+        Collections.sort(sortedKeys);
 
         for (String type : sortedKeys) {
             String[] parts = type.split("/");
@@ -755,7 +668,11 @@ public class ClassTree {
 
             for (int i = 0; i < parts.length; i++) {
                 String part = parts[i];
-                pathStr = pathStr.isEmpty() ? part : pathStr + "/" + part;
+                if (pathStr.isEmpty()) {
+                    pathStr = part;
+                } else {
+                    pathStr = pathStr + "/" + part;
+                }
                 boolean isLast = (i == parts.length - 1);
 
                 TreeNode node = allNodes.get(pathStr);
@@ -784,10 +701,6 @@ public class ClassTree {
         return pendingSmaliMap;
     }
 
-    public Map<String, java.util.HashSet<String>> getEditedClassMap() {
-        return editedClassMap;
-    }
-
     public List<TreeNode> buildEditedFullTree() {
         Map<String, TreeNode> allNodes = new HashMap<>();
         List<TreeNode> roots = new ArrayList<>();
@@ -796,7 +709,7 @@ public class ClassTree {
         for (java.util.HashSet<String> classes : editedClassMap.values()) {
             editedClasses.addAll(classes);
         }
-        java.util.Collections.sort(editedClasses);
+        Collections.sort(editedClasses);
 
         for (String type : editedClasses) {
             String[] parts = type.split("/");
@@ -831,7 +744,7 @@ public class ClassTree {
     }
 
     private void sortNodes(List<TreeNode> nodes) {
-        java.util.Collections.sort(nodes, new Comparator<TreeNode>() {
+        nodes.sort(new Comparator<TreeNode>() {
             @Override
             public int compare(TreeNode a, TreeNode b) {
                 if (a.isDirectory() != b.isDirectory()) {
@@ -882,7 +795,7 @@ public class ClassTree {
 
     private void deleteRecursive(File fileOrDirectory) {
         if (fileOrDirectory.isDirectory()) {
-            for (File child : fileOrDirectory.listFiles()) {
+            for (File child : Objects.requireNonNull(fileOrDirectory.listFiles())) {
                 deleteRecursive(child);
             }
         }
@@ -921,7 +834,7 @@ public class ClassTree {
     public List<String> getAllStrings() {
         HashSet<String> allStrings = new HashSet<>();
         
-        synchronized (classMap) {
+        synchronized (Collections.unmodifiableMap(classMap)) {
             for (ClassDef classDef : classMap.values()) {
                 // From Fields
                 for (Field field : classDef.getFields()) {
@@ -1038,7 +951,7 @@ public class ClassTree {
                 }
                 pop();
             }
-            java.util.Collections.sort(str, sortByType);
+            str.sort(sortByType);
             return str;
         }
 
@@ -1073,4 +986,142 @@ public class ClassTree {
             return sb.toString();
         }
     }
+
+    // helper classe for debug info Striping
+    private class DebugInfoStripper implements com.android.tools.smali.dexlib2.iface.ClassDef {
+        private final ClassDef delegate;
+        private final CompilationOptions options;
+
+        public DebugInfoStripper(ClassDef delegate, CompilationOptions options) {
+            this.delegate = delegate;
+            this.options = options;
+        }
+
+        @Override @javax.annotation.Nonnull public String getType() { return delegate.getType(); }
+        @Override public int getAccessFlags() { return delegate.getAccessFlags(); }
+        @Override @javax.annotation.Nullable public String getSuperclass() { return delegate.getSuperclass(); }
+        @Override @javax.annotation.Nonnull public List<String> getInterfaces() { return delegate.getInterfaces(); }
+        @Override @javax.annotation.Nullable public String getSourceFile() { return options.removeDebugSource || options.removeAllDebug ? null : delegate.getSourceFile(); }
+        @Override @javax.annotation.Nonnull public Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> getAnnotations() { return delegate.getAnnotations(); }
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getStaticFields() { return delegate.getStaticFields(); }
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getInstanceFields() { return delegate.getInstanceFields(); }
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Field> getFields() { return delegate.getFields(); }
+
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getDirectMethods() {
+            return wrapMethods(delegate.getDirectMethods());
+        }
+
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getVirtualMethods() {
+            return wrapMethods(delegate.getVirtualMethods());
+        }
+
+        @Override @javax.annotation.Nonnull public Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> getMethods() {
+            return wrapMethods(delegate.getMethods());
+        }
+
+        @Override public int compareTo(@javax.annotation.Nonnull CharSequence o) { return delegate.compareTo(o); }
+        @Override public void validateReference() throws com.android.tools.smali.dexlib2.iface.reference.Reference.InvalidReferenceException { delegate.validateReference(); }
+        @Override public int length() { return delegate.length(); }
+        @Override public char charAt(int index) { return delegate.charAt(index); }
+        @NonNull
+        @Override public CharSequence subSequence(int start, int end) { return delegate.subSequence(start, end); }
+        @Override @javax.annotation.Nonnull public String toString() { return delegate.toString(); }
+
+        private Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> wrapMethods(Iterable<? extends com.android.tools.smali.dexlib2.iface.Method> methods) {
+            List<com.android.tools.smali.dexlib2.iface.Method> wrapped = new ArrayList<>();
+            for (com.android.tools.smali.dexlib2.iface.Method method : methods) {
+                wrapped.add(new MethodStripper(method, options));
+            }
+            return wrapped;
+        }
+    }
+
+    // Method stripper
+    private class MethodStripper implements com.android.tools.smali.dexlib2.iface.Method {
+        private final com.android.tools.smali.dexlib2.iface.Method delegate;
+        private final CompilationOptions options;
+
+        public MethodStripper(com.android.tools.smali.dexlib2.iface.Method delegate, CompilationOptions options) {
+            this.delegate = delegate;
+            this.options = options;
+        }
+
+        @Override @javax.annotation.Nonnull public String getDefiningClass() { return delegate.getDefiningClass(); }
+        @Override @javax.annotation.Nonnull public String getName() { return delegate.getName(); }
+        @Override @javax.annotation.Nonnull public List<? extends com.android.tools.smali.dexlib2.iface.MethodParameter> getParameters() {
+            if (options.removeDebugParam || options.removeAllDebug) {
+                List<com.android.tools.smali.dexlib2.iface.MethodParameter> params = new ArrayList<>();
+                for (com.android.tools.smali.dexlib2.iface.MethodParameter p : delegate.getParameters()) {
+                    params.add(new com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter(p.getType(), null, null));
+                }
+                return params;
+            }
+            return delegate.getParameters();
+        }
+        @Override @javax.annotation.Nonnull public List<? extends CharSequence> getParameterTypes() { return delegate.getParameterTypes(); }
+        @Override @javax.annotation.Nonnull public String getReturnType() { return delegate.getReturnType(); }
+        @Override public int getAccessFlags() { return delegate.getAccessFlags(); }
+        @Override @javax.annotation.Nonnull public Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> getAnnotations() { return delegate.getAnnotations(); }
+        @Override @javax.annotation.Nonnull public Set<com.android.tools.smali.dexlib2.HiddenApiRestriction> getHiddenApiRestrictions() { return delegate.getHiddenApiRestrictions(); }
+        @Override @javax.annotation.Nullable public com.android.tools.smali.dexlib2.iface.MethodImplementation getImplementation() {
+            com.android.tools.smali.dexlib2.iface.MethodImplementation impl = delegate.getImplementation();
+            if (impl == null) return null;
+            return new MethodImplementationStripper(impl, options);
+        }
+        @Override public int compareTo(@javax.annotation.Nonnull com.android.tools.smali.dexlib2.iface.reference.MethodReference o) { return delegate.compareTo(o); }
+        @Override public void validateReference() throws com.android.tools.smali.dexlib2.iface.reference.Reference.InvalidReferenceException { delegate.validateReference(); }
+    }
+
+    // method implemention stripper
+    private class MethodImplementationStripper implements com.android.tools.smali.dexlib2.iface.MethodImplementation {
+        private final com.android.tools.smali.dexlib2.iface.MethodImplementation delegate;
+        private final CompilationOptions options;
+
+        public MethodImplementationStripper(com.android.tools.smali.dexlib2.iface.MethodImplementation delegate, CompilationOptions options) {
+            this.delegate = delegate;
+            this.options = options;
+        }
+
+        @Override public int getRegisterCount() { return delegate.getRegisterCount(); }
+        @NonNull
+        @Override public Iterable<? extends com.android.tools.smali.dexlib2.iface.instruction.Instruction> getInstructions() { return delegate.getInstructions(); }
+        @NonNull
+        @Override public List<? extends com.android.tools.smali.dexlib2.iface.TryBlock<? extends com.android.tools.smali.dexlib2.iface.ExceptionHandler>> getTryBlocks() { return delegate.getTryBlocks(); }
+
+        @NonNull
+        @Override public Iterable<? extends com.android.tools.smali.dexlib2.iface.debug.DebugItem> getDebugItems() {
+            if (options.removeAllDebug) return new ArrayList<>();
+            List<com.android.tools.smali.dexlib2.iface.debug.DebugItem> filtered = new ArrayList<>();
+            for (com.android.tools.smali.dexlib2.iface.debug.DebugItem item : delegate.getDebugItems()) {
+                boolean remove = false;
+                switch (item.getDebugItemType()) {
+                    case com.android.tools.smali.dexlib2.DebugItemType.SET_SOURCE_FILE:
+                        if (options.removeDebugSource) remove = true;
+                        break;
+                    case com.android.tools.smali.dexlib2.DebugItemType.LINE_NUMBER:
+                        if (options.removeDebugLine) remove = true;
+                        break;
+                    case com.android.tools.smali.dexlib2.DebugItemType.PROLOGUE_END:
+                        if (options.removeDebugPrologue) remove = true;
+                        break;
+                    case com.android.tools.smali.dexlib2.DebugItemType.EPILOGUE_BEGIN:
+                        // Prologue option usually covers epilogue too in some tools, or we can map it
+                        if (options.removeDebugPrologue) remove = true;
+                        break;
+                    case com.android.tools.smali.dexlib2.DebugItemType.START_LOCAL:
+                    case com.android.tools.smali.dexlib2.DebugItemType.END_LOCAL:
+                    case com.android.tools.smali.dexlib2.DebugItemType.RESTART_LOCAL:
+                    case com.android.tools.smali.dexlib2.DebugItemType.START_LOCAL_EXTENDED:
+                        if (options.removeDebugLocal) remove = true;
+                        break;
+                }
+                if (!remove) filtered.add(item);
+            }
+            // Param debug info is usually handled via method parameters if we want to strip names,
+            // but in debug_info_item they are also present.
+            // dexlib2 doesn't easily expose the parameter names list from debug_info_item here.
+            return filtered;
+        }
+    }
+
 }

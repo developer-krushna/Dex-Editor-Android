@@ -109,49 +109,43 @@ public class ViewAnimationHelper {
 	}
     
     public static void enableSwipeViewToggle(final View visibleView, final View hiddenView) {
-        final boolean[] switched = {false}; // Use an array to track the state
+        final boolean[] switched = {false};
+        final int touchSlop = android.view.ViewConfiguration.get(visibleView.getContext()).getScaledTouchSlop();
 
         final GestureDetector gestureDetector = new GestureDetector(visibleView.getContext(), new GestureDetector.SimpleOnGestureListener() {
-            private static final int SWIPE_THRESHOLD = 100;
-            private static final int SWIPE_VELOCITY_THRESHOLD = 100;
-
             @Override
             public boolean onDown(MotionEvent e) {
-                return true;
+                // Don't consume onDown so the RecyclerView can still handle vertical scrolling
+                return false;
             }
 
             @Override
             public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
-                boolean result = false;
-                try {
-                    float diffX = e2.getX() - e1.getX();
-                    float diffY = e2.getY() - e1.getY();
-
-                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-                        if (diffX > 0) {  // Right to Left  (Swipe Right -  "Back" to original state)
-                            if (switched[0]) { // If the views are currently switched
-                                slideOutRight(visibleView); // Slide out current visible to the right
-                                slideInLeft(hiddenView);   // Slide in the initially hidden from the left
-                                switched[0] = false; // Back to initial state
-
-                                result = true;
-                            }
-
-                        } else { // Left to right (Swipe Left - Switch Views)
-                            if (!switched[0]) { // If the views are NOT currently switched
-                                slideOutLeft(visibleView);  // Slide out current visible to the left
-                                slideInRight(hiddenView);   // Slide in the initially hidden from the right
-                                switched[0] = true;  // Views are now switched
-
-                                result = true;
-                            }
-
+                if (e1 == null || e2 == null) return false;
+                
+                float diffX = e2.getX() - e1.getX();
+                float diffY = e2.getY() - e1.getY();
+                
+                // Sensitivity: Must be a clear horizontal swipe and exceed thresholds
+                // MT Manager style: 2x more horizontal than vertical movement required
+                if (Math.abs(diffX) > Math.abs(diffY) * 2 && Math.abs(diffX) > touchSlop * 3 && Math.abs(velocityX) > 500) {
+                    if (diffX > 0) { // Swipe Right
+                        if (switched[0]) {
+                            slideOutRight(visibleView);
+                            slideInLeft(hiddenView);
+                            switched[0] = false;
+                            return true;
+                        }
+                    } else { // Swipe Left
+                        if (!switched[0]) {
+                            slideOutLeft(visibleView);
+                            slideInRight(hiddenView);
+                            switched[0] = true;
+                            return true;
                         }
                     }
-                } catch (Exception exception) {
-                    exception.printStackTrace();
                 }
-                return result;
+                return false;
             }
         });
 
@@ -159,7 +153,9 @@ public class ViewAnimationHelper {
             @SuppressLint("ClickableViewAccessibility")
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                return gestureDetector.onTouchEvent(event);
+                gestureDetector.onTouchEvent(event);
+                // Return false to allow the view (RecyclerView) to process its own scroll/click events
+                return false;
             }
         });
     }

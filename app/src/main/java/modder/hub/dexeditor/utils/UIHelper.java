@@ -3,9 +3,10 @@ package modder.hub.dexeditor.utils;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
+import android.view.MenuItem;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 
 /**
  * UIHelper: Common UI utilities to avoid code duplication across activities and fragments.
@@ -19,5 +20,11 @@ public class UIHelper {
             clipboard.setPrimaryClip(clip);
             Toast.makeText(context, "Text has been copied to clipboard", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public static void setMenuItemColor(MenuItem item, int color) {
+        SpannableString s = new SpannableString(item.getTitle());
+        s.setSpan(new ForegroundColorSpan(color), 0, s.length(), 0);
+        item.setTitle(s);
     }
 }
