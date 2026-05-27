@@ -35,6 +35,10 @@
 
 package modder.hub.dexeditor.smali;
 
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
 import java.util.*;
 import java.util.regex.*;
 
@@ -43,7 +47,7 @@ Author @developer-krushna
 Code comment and improvement by ChatGPT
 */
 
-// This is an exprimental project . Error may show while generating 
+// This is an exprimental project . Error may show while generating  field accesser
 
 public class SmaliFieldAccessParser {
 	
@@ -58,20 +62,22 @@ public class SmaliFieldAccessParser {
 			put("D", "wide");     // double type (uses wide suffix)
 		}};
 	
-	private String className;  // The class name that contains the fields
+	private final String className;  // The class name that contains the fields
 	
 	public SmaliFieldAccessParser(String className) {
 		this.className = className;
 	}
 	
 	// Generates smali code for getting a field value
-	public String generateGetCode(String fieldSignature) {
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    public String generateGetCode(String fieldSignature) {
 		FieldInfo fieldInfo = parseFieldSignature(fieldSignature);
 		return generateGetCode(fieldInfo);
 	}
 	
 	// Generates smali code for setting a field value
-	public String generatePutCode(String fieldSignature) {
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    public String generatePutCode(String fieldSignature) {
 		FieldInfo fieldInfo = parseFieldSignature(fieldSignature);
 		return generatePutCode(fieldInfo);
 	}
@@ -120,7 +126,8 @@ public class SmaliFieldAccessParser {
 	}
 	
 	// Parses a field signature string into FieldInfo object
-	private FieldInfo parseFieldSignature(String signature) {
+	@RequiresApi(api = Build.VERSION_CODES.O)
+    private FieldInfo parseFieldSignature(String signature) {
 		FieldInfo info = new FieldInfo();
 		// Regex to extract field name and type from smali field declaration
 		Matcher matcher = Pattern.compile(

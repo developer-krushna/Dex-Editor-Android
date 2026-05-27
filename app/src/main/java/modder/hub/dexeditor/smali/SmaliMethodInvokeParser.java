@@ -56,7 +56,7 @@ public class SmaliMethodInvokeParser {
 	"Z", "B", "S", "C", "I", "J", "F", "D", "V"
 	));
 	
-	private String className;
+	private final String className;
 	
 	public SmaliMethodInvokeParser(String className) {
 		this.className = className;
@@ -97,7 +97,7 @@ public class SmaliMethodInvokeParser {
 		// For non-static methods, include the object register
 		if (!methodInfo.isStatic) {
 			sb.append(resultRegister);
-			if (methodInfo.parameterTypes.size() > 0) {
+			if (!methodInfo.parameterTypes.isEmpty()) {
 				sb.append(", ");
 			}
 		}
@@ -188,11 +188,11 @@ public class SmaliMethodInvokeParser {
 			
 			// Parse parameters
 			String params = matcher.group("params");
-			if (!params.isEmpty()) {
-				info.parameterTypes = parseParameterTypes(params);
-			}
-			
-			// Parse return type
+            if (params != null && !params.isEmpty()) {
+                info.parameterTypes = parseParameterTypes(params);
+            }
+
+            // Parse return type
 			info.returnType = matcher.group("return");
 		}
 		
