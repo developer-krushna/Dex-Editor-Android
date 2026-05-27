@@ -43,7 +43,7 @@ import java.util.List;
 public class TreeNode {
     private String name;
     private String fullName;
-    private int depth;
+    private int depth = -1;
     private boolean isDirectory;
     private boolean isExpanded;
     private boolean isChecked;
@@ -51,6 +51,7 @@ public class TreeNode {
     private boolean isSnippet = false;
     private TreeNode parent;
     private List<TreeNode> children = new ArrayList<>();
+    private CharSequence cachedSpannedName;
 
     public TreeNode(String name, String fullName, int depth, boolean isDirectory) {
         this.name = name;
@@ -58,6 +59,14 @@ public class TreeNode {
         this.depth = depth;
         this.isDirectory = isDirectory;
         this.isExpanded = false;
+    }
+
+    public TreeNode(String name, String fullName, boolean isDirectory) {
+        this.name = name;
+        this.fullName = fullName;
+        this.isDirectory = isDirectory;
+        this.isExpanded = false;
+        this.depth = -1;
     }
 
     public int getLineNumber() {
@@ -146,5 +155,13 @@ public class TreeNode {
     public void addChild(TreeNode child) {
         child.setParent(this);
         children.add(child);
+    }
+
+    public CharSequence getCachedSpannedName() {
+        return cachedSpannedName;
+    }
+
+    public void setCachedSpannedName(CharSequence cachedSpannedName) {
+        this.cachedSpannedName = cachedSpannedName;
     }
 }
