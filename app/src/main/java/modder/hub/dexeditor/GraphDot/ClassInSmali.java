@@ -1,5 +1,5 @@
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
+ * Dex-Editor-Android an Advanced Dex Editor for Android
  * Copyright 2024, developer-krushna
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,8 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
+
+
  *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
  *     additional information or have any questions
  */
@@ -53,7 +53,7 @@ public class ClassInSmali {
 
     public ClassInSmali() {
     }
-	
+
 	public Map<String, Method> getMethodDict() {
         return methodDict;
     }

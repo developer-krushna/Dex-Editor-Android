@@ -1,6 +1,6 @@
 
 /*
- * Dex-Editor-Android an Advanced Dex Editor for Android 
+ * Dex-Editor-Android an Advanced Dex Editor for Android
  * Copyright 2024, developer-krushna
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,13 +28,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
- 
+
+
  *     Please contact Krushna by email mt.modder.hub@gmail.com if you need
  *     additional information or have any questions
  */
- 
- 
+
+
 package modder.hub.dexeditor.GraphDot;
 import java.io.BufferedReader;
 import java.io.File;
@@ -49,36 +49,30 @@ Special thanks to @Timscriptov for enhancing and fixing some parts of the codes
 
 */
 public class DrawFlowDiagram {
-	private String smaliFilePath;
-	private String pictureFormat;
-	private String[] methodsToDraw;
-	private String outputDir;
-	private String dotFilePath;
-	private ClassInSmali classInSmali;
+	private final String smaliFilePath;
+    private final String[] methodsToDraw;
+    private final ClassInSmali classInSmali;
 	private String curMethodName;
-	
-	public DrawFlowDiagram(String smaliFilePath, String pictureFormat, String[] methodsToDraw, String outputDir, String dotFilePath) {
+
+	public DrawFlowDiagram(String smaliFilePath, String[] methodsToDraw) {
 		this.smaliFilePath = smaliFilePath;
-		this.pictureFormat = pictureFormat;
-		this.methodsToDraw = methodsToDraw;
-		this.outputDir = outputDir;
-		this.dotFilePath = dotFilePath;
-		this.classInSmali = new ClassInSmali();
+        this.methodsToDraw = methodsToDraw;
+        this.classInSmali = new ClassInSmali();
 		this.curMethodName = null;
 	}
-	
+
 	public void run() {
 		parseClassInSmali();
 		draw();
 	}
-	
+
 	public ClassInSmali getClassInSmali() {
 		return classInSmali;
 	}
-	
+
 	private void parseClassInSmali() {
 		try  {
-			
+
 			BufferedReader smaliFile = new BufferedReader(new FileReader(smaliFilePath));
 			String line;
 			int lineIndex = 0;
@@ -107,7 +101,7 @@ public class DrawFlowDiagram {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private boolean containsMethod(String methodName) {
 		if (methodsToDraw != null) {
 			for (String method : methodsToDraw) {
@@ -118,13 +112,13 @@ public class DrawFlowDiagram {
 		}
 		return false;
 	}
-	
+
 	private void addMethodIns(String trimLine, int lineIndex) {
 		if (curMethodName != null) {
 			classInSmali.addMethodIns(curMethodName, trimLine, lineIndex);
 		}
 	}
-	
+
 	private void draw() {
 		for (Method method : classInSmali.getMethodDict().values()) {
 			try {
@@ -134,7 +128,7 @@ public class DrawFlowDiagram {
 			}
 		}
 	}
-	
+
 	public String drawMethodFlowDiagram(Method method) {
 		String methodName = method.getMethodName();
 		StringBuilder dotStr = new StringBuilder("digraph G{\n\tstart[label=\"start\"]\n");
@@ -146,7 +140,7 @@ public class DrawFlowDiagram {
 				dotStr.append("\tstart->node_").append(ins.getLineNum()).append("\n");
 			} else {
 				dotStr.append(getDotStrForNode(ins));
-				
+
 				String edgeColor = "black";
 				String lastInsType = method.getInstructions().get(index - 1).getType();
 				if (lastInsType.equals(InstructionType.CON_JUMP)) {
@@ -172,20 +166,20 @@ public class DrawFlowDiagram {
 			}
 		}
 		dotStr.append("}");
-		
+
 		return dotStr.toString();
-		
+
 	}
-	
-	
-	
-	
+
+
+
+
 	private String getDotStrForEdge(int fromLineNum, int toLineNum, String edgeColor) {
 		return "\tedge[color=" + edgeColor + "]\n" +
 		"\tnode_" + fromLineNum + "->node_" + toLineNum + "\n" +
 		"\tedge[color=black]\n";
 	}
-	
+
 	private String getDotStrForNode(Instruction instruction) {
 		String label = instruction.getIns().startsWith("return") ? "style=filled,fillcolor=yellow" : "";
 		return "\tnode_" + instruction.getLineNum() + " [label=\"<f0>" + instruction.getLineNum() + "|<f1>" + instruction.getIns() + "\"" + label + "];\n";

@@ -47,7 +47,7 @@ public class InstructionType {
     public static final String CON_LABEL = ":cond";
     public static final String RETURN = "return";
     public static final String UNKNOWN = "null";
-  // try_catch instruction type not implemented yet .. 
+  // try_catch instruction type not implemented yet ..
     public static String getInsType(String ins) {
         if (ins.startsWith(GOTO)) {
             return GOTO;
