@@ -169,7 +169,7 @@ public class AlertCircularProgress {
 
         @Override
         public void run() {
-            if (dialog.activity != null && !dialog.activity.isFinishing() && !dialog.activity.isDestroyed()) {
+            if (!dialog.activity.isFinishing() && !dialog.activity.isDestroyed()) {
                 dialog.alertDialog.show();
             }
         }
@@ -184,7 +184,7 @@ public class AlertCircularProgress {
 
         @Override
         public void run() {
-            if (dialog.alertDialog != null && dialog.alertDialog.isShowing()) {
+            if (dialog.alertDialog.isShowing()) {
                 dialog.alertDialog.dismiss();
             }
         }
