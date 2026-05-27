@@ -61,6 +61,7 @@
                 android:id="@+id/view_pager"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="#FFFFFF"
                 android:visibility="gone" />
 
         </FrameLayout>
@@ -84,23 +85,15 @@
         android:background="#FFFFFF"
         android:orientation="vertical">
 
-        <LinearLayout
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/drawer_toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="?attr/actionBarSize"
             android:background="#202020"
-            android:orientation="vertical">
+            app:title="Opened classes"
+            app:titleTextColor="#FFFFFF" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:text="Opened classes"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
+        <modder.hub.dexeditor.views.FastScrollerRecyclerView
             android:id="@+id/tabs_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

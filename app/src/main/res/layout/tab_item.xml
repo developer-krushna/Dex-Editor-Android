@@ -72,11 +72,5 @@
                 android:ellipsize="start"
                 android:singleLine="true" />
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/tab_close_hidden"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>
