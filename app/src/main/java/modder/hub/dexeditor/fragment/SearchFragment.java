@@ -35,6 +35,9 @@ import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.BackgroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -73,14 +76,22 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.android.tools.smali.dexlib2.iface.*;
+import com.android.tools.smali.dexlib2.iface.instruction.*;
+import com.android.tools.smali.dexlib2.iface.reference.*;
+import com.android.tools.smali.dexlib2.iface.value.*;
+import com.android.tools.smali.dexlib2.dexbacked.*;
 
 import modder.hub.dexeditor.R;
 import modder.hub.dexeditor.activity.DexEditorActivity;
@@ -90,8 +101,8 @@ import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
 import modder.hub.dexeditor.utils.TreeHelper;
 import modder.hub.dexeditor.utils.UIHelper;
-import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import modder.hub.dexeditor.views.AlertProgress;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 // Author : @developer-krushna
 // Got some LOGICS from AI but thought , idea other resources copied from mt manager interface
@@ -103,56 +114,39 @@ import modder.hub.dexeditor.views.AlertProgress;
  */
 public class SearchFragment extends Fragment {
 
-    // UI components for the search result list and control panel
-    private RecyclerView recyclerView;
-    private LinearLayout btnNewSearch;
-    private LinearLayout btnSearchInResults;
-    private LinearLayout btnReplaceInResults;
-    private LinearLayout btnClearResults;
-    private LinearLayout layoutSearchInfo;
+    private LinearLayout btnSearchInResults, btnReplaceInResults, btnClearResults, layoutSearchInfo;
     private TextView tvSearchInfo;
     private List<TreeNode> searchResults = new ArrayList<>();
     private TreeAdapter adapter;
     private String currentQuery;
-    private ImageView btnSearchMenu;
 
-    // We store the last search settings to provide a better user experience (stickiness)
-    private String lastSearchQuery = "";
-    private String lastSearchPath = "/";
-    private String lastReplaceWith = "";
-    private String lastSearchType = "Smali";
-    private boolean lastSearchSubfolders = true;
-    private boolean lastMatchCase = false;
-    private boolean lastIsRegex = false;
-    private boolean lastExactlyMatch = false;
-    private boolean lastIsHex = false;
-    private boolean lastUseExcludeList = false;
+    private String lastSearchQuery = "", lastSearchPath = "/", lastReplaceWith = "", lastSearchType = "Smali";
+    private boolean lastSearchSubfolders = true, lastMatchCase = false, lastIsRegex = false, lastExactlyMatch = false, lastIsHex = false, lastUseExcludeList = false;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_search, container, false);
-        recyclerView = view.findViewById(R.id.search_results_rv);
+        FastScrollerRecyclerView recyclerView = view.findViewById(R.id.search_results_rv);
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setItemViewCacheSize(20);
 
-        // Inflate the header view that contains the search functions and info bar
         View headerView = inflater.inflate(R.layout.search_header, recyclerView, false);
-        btnNewSearch = headerView.findViewById(R.id.btn_new_search);
+        LinearLayout btnNewSearch = headerView.findViewById(R.id.btn_new_search);
         btnSearchInResults = headerView.findViewById(R.id.btn_search_in_results);
         btnReplaceInResults = headerView.findViewById(R.id.btn_replace_in_results);
         btnClearResults = headerView.findViewById(R.id.btn_clear_results);
         layoutSearchInfo = headerView.findViewById(R.id.layout_search_info);
         tvSearchInfo = headerView.findViewById(R.id.tv_search_results_info);
-        btnSearchMenu = headerView.findViewById(R.id.btn_search_menu);
+        ImageView treeOptionsButton = headerView.findViewById(R.id.btn_treeview_options);
 
-        // Set up the results list with a custom TreeAdapter
         DexEditorActivity activity = (DexEditorActivity) getActivity();
         if (activity != null) {
             searchResults = activity.searchNodes;
             adapter = new TreeAdapter(getContext(), searchResults, new TreeAdapter.OnNodeClickListener() {
                 @Override
                 public void onNodeClick(TreeNode node) {
-                    // Navigate to the class or specific snippet line when clicked
                     if (node.isSnippet()) {
                         activity.openClassAtLine(node.getFullName(), node.getLineNumber(), currentQuery);
                     } else if (!node.isDirectory()) {
@@ -162,95 +156,99 @@ public class SearchFragment extends Fragment {
 
                 @Override
                 public void onNodeDeleted(TreeNode node) {
-                    removeNodeFromSearchResults(node);
+                    if (node.isSnippet()) {
+                        TreeNode parent = node.getParent();
+                        if (parent != null && !parent.isDirectory()) {
+                            removeNodeFromSearchResults(parent);
+                        } else {
+                            removeNodeFromSearchResults(node);
+                        }
+                    } else {
+                        removeNodeFromSearchResults(node);
+                    }
                 }
 
-                @Override
-                public void onSelectionChanged(int count) {
-                }
-
-                @Override
-                public void onLocate(TreeNode node) {
+                @Override public void onSelectionChanged(int count) {}
+                @Override public void onLocate(TreeNode node) {
                     activity.locateClass(node.getFullName());
                 }
-
-                @Override
-                public void onCopyName(TreeNode node) {
+                @Override public void onCopyName(TreeNode node) {
                     UIHelper.copyToClipboard(requireContext(), node.getName());
                 }
             }, false);
             adapter.setSearchList(true, currentQuery);
-
-            // Use ConcatAdapter to combine the header and the results list
-            ConcatAdapter concatAdapter = new ConcatAdapter(new HeaderViewAdapter(headerView), adapter);
-            recyclerView.setAdapter(concatAdapter);
+            recyclerView.setAdapter(new ConcatAdapter(new HeaderViewAdapter(headerView), adapter));
         }
 
         btnNewSearch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 checkUnsavedAndShowWarning(new Runnable() {
-                    @Override
-                    public void run() {
+                    @Override public void run() {
                         showSearchDialog(false);
                     }
                 });
             }
         });
         btnSearchInResults.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 showSearchDialog(true);
             }
         });
         btnReplaceInResults.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 showReplaceDialog();
             }
         });
         btnClearResults.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 clearResults();
             }
         });
-        btnSearchMenu.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showSearchMenu(v);
+        treeOptionsButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showTreeOptionsMenu(v);
             }
         });
 
         updateUIState();
-        new FastScrollerBuilder(recyclerView).build();
-
         return view;
     }
 
-    // A simple adapter to hold a single View (header)
+    @Override
+    public void onResume() {
+        super.onResume();
+        DexEditorActivity activity = (DexEditorActivity) getActivity();
+        if (activity != null && activity.pendingSearchPath != null) {
+            String path = activity.pendingSearchPath;
+            activity.pendingSearchPath = null;
+            showSearchDialogWithPath(path);
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void refreshUI() {
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+            updateSearchInfoBar();
+        }
+    }
+
+    public void showSearchDialogWithPath(String path) {
+        showSearchDialog(false, path);
+    }
+
     private static class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.ViewHolder> {
         private final View view;
-
         HeaderViewAdapter(View view) {
             this.view = view;
         }
-
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new ViewHolder(view);
         }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        }
-
-        @Override
-        public int getItemCount() {
+        @Override public void onBindViewHolder(@NonNull ViewHolder holder, int position) {}
+        @Override public int getItemCount() {
             return 1;
         }
-
         static class ViewHolder extends RecyclerView.ViewHolder {
             ViewHolder(View view) {
                 super(view);
@@ -329,7 +327,7 @@ public class SearchFragment extends Fragment {
         adapter.refreshVisibleNodes();
     }
 
-    private void showSearchMenu(View v) {
+    private void showTreeOptionsMenu(View v) {
         PopupMenu popup = new PopupMenu(requireContext(), v);
         popup.getMenu().add(0, 1, 0, "Collapse all");
         popup.getMenu().add(0, 2, 0, "Expand all");
@@ -363,19 +361,17 @@ public class SearchFragment extends Fragment {
     }
 
     private void copyClassNames() {
+        List<String> names = new ArrayList<>();
+        collectClassFullNames(searchResults, names);
         StringBuilder sb = new StringBuilder();
-        collectClassNamesRecursive(searchResults, sb);
-        if (sb.length() > 0) {
-            UIHelper.copyToClipboard(requireContext(), sb.toString().trim());
-        }
+        for (String name : names) sb.append(name.replace('/', '.')).append("\n");
+        if (sb.length() > 0) UIHelper.copyToClipboard(requireContext(), sb.toString().trim());
     }
 
-    private void collectClassNamesRecursive(List<TreeNode> nodes, StringBuilder sb) {
+    private void collectClassFullNames(List<TreeNode> nodes, List<String> out) {
         for (TreeNode node : nodes) {
-            if (!node.isDirectory() && !node.isSnippet()) {
-                sb.append(node.getFullName().replace('/', '.')).append("\n");
-            }
-            collectClassNamesRecursive(node.getChildren(), sb);
+            if (!node.isDirectory() && !node.isSnippet()) out.add(node.getFullName());
+            collectClassFullNames(node.getChildren(), out);
         }
     }
 
@@ -392,14 +388,12 @@ public class SearchFragment extends Fragment {
         }
     }
 
+    // count total serach result
+    // snippets are basically the tota;l number of highligted region exluding the folder
     private int countTotalSnippets(List<TreeNode> nodes) {
         int count = 0;
         for (TreeNode node : nodes) {
-            if (node.isSnippet()) {
-                count++;
-            } else if (!node.isDirectory() && node.getChildren().isEmpty()) {
-                count++;
-            }
+            if (node.isSnippet() || (!node.isDirectory() && node.getChildren().isEmpty())) count++;
             count += countTotalSnippets(node.getChildren());
         }
         return count;
@@ -445,6 +439,10 @@ public class SearchFragment extends Fragment {
      * @param searchInResults If true, filters the existing results instead of searching all files.
      */
     private void showSearchDialog(boolean searchInResults) {
+        showSearchDialog(searchInResults, null);
+    }
+
+    private void showSearchDialog(boolean searchInResults, String initialPath) {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_search_dex, null);
         AutoCompleteTextView etFind = dialogView.findViewById(R.id.et_find);
         EditText etPath = dialogView.findViewById(R.id.et_path);
@@ -469,7 +467,7 @@ public class SearchFragment extends Fragment {
             cbUseExcludeList.setEnabled(false);
             cbSearchSubfolders.setVisibility(View.GONE);
         } else {
-            etPath.setText(lastSearchPath);
+            etPath.setText(initialPath != null ? initialPath : lastSearchPath);
             etPath.setEnabled(true);
             tvExcludeList.setEnabled(true);
             cbUseExcludeList.setEnabled(true);
@@ -541,59 +539,22 @@ public class SearchFragment extends Fragment {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String query = etFind.getText().toString().trim();
-                String path = searchInResults ? "" : etPath.getText().toString();
-                String type = spinnerSearchType.getSelectedItem().toString();
-                boolean searchSubfolders = cbSearchSubfolders.isChecked();
-                boolean matchCase = cbMatchCase.isChecked();
-                boolean isRegex = cbRegex.isChecked();
-                boolean exactlyMatch = cbExactlyMatch.isChecked();
-                boolean isHex = cbHex.isChecked();
-                boolean useExcludeList = cbUseExcludeList.isChecked();
-
+                String query = etFind.getText().toString().trim(), type = spinnerSearchType.getSelectedItem().toString(), path = searchInResults ? "" : etPath.getText().toString();
+                boolean isHex = cbHex.isChecked(), useExcludeList = cbUseExcludeList.isChecked();
                 if (type.equals("Integer")) {
                     try {
                         String q = query;
-                        if (isHex) {
-                            if (q.startsWith("0x")) q = q.substring(2);
-                            Long.parseLong(q, 16);
-                        } else {
-                            if (q.startsWith("0x")) {
-                                throw new NumberFormatException();
-                            }
-                            Long.parseLong(q);
-                        }
-                    } catch (Exception e) {
-                        modder.hub.dexeditor.utils.SketchwareUtil.showMessage(requireActivity(), "Value format error");
-                        return;
-                    }
+                        if (isHex) { if (q.startsWith("0x")) q = q.substring(2); Long.parseLong(q, 16); }
+                        else { if (q.startsWith("0x")) throw new NumberFormatException(); Long.parseLong(q); }
+                    } catch (Exception e) { SketchwareUtil.showMessage(requireActivity(), "Value format error"); return; }
                 }
-
-                lastSearchQuery = query;
-                if (!searchInResults) {
-                    lastSearchPath = path;
-                    lastSearchSubfolders = searchSubfolders;
-                    lastUseExcludeList = useExcludeList;
-                    prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply();
-                }
-                lastSearchType = type;
-                lastMatchCase = matchCase;
-                lastIsRegex = isRegex;
-                lastExactlyMatch = exactlyMatch;
-                lastIsHex = isHex;
-
+                lastSearchQuery = query; lastSearchType = type;
+                if (!searchInResults) { lastSearchPath = path; lastSearchSubfolders = cbSearchSubfolders.isChecked(); lastUseExcludeList = useExcludeList; prefs.edit().putBoolean("use_exclude_list", useExcludeList).apply(); }
+                lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked(); lastIsHex = isHex;
                 List<String> scopeClasses = null;
-                if (searchInResults) {
-                    scopeClasses = new ArrayList<>();
-                    collectClassesRecursive(searchResults, scopeClasses);
-                }
-
-                searchResults.clear();
-                currentQuery = null;
-                adapter.refreshVisibleNodes();
-                updateUIState();
-
-                new SearchTask(SearchFragment.this, query, path, type, searchSubfolders, matchCase, isRegex, exactlyMatch, isHex, scopeClasses, useExcludeList).start();
+                if (searchInResults) { scopeClasses = new ArrayList<>(); collectClassFullNames(searchResults, scopeClasses); }
+                searchResults.clear(); currentQuery = null; adapter.refreshVisibleNodes(); updateUIState();
+                new SearchTask(SearchFragment.this, query, path, type, lastSearchSubfolders, lastMatchCase, lastIsRegex, lastExactlyMatch, isHex, scopeClasses, useExcludeList).start();
                 dialog.dismiss();
             }
         });
@@ -649,38 +610,17 @@ public class SearchFragment extends Fragment {
                 .setPositiveButton("OK", new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
-                        String find = etFind.getText().toString();
-                        String replace = etReplaceWith.getText().toString();
-                        String type = spinnerSearchType.getSelectedItem().toString();
-                        boolean matchCase = cbMatchCase.isChecked();
-                        boolean isRegex = cbRegex.isChecked();
-                        boolean exactlyMatch = cbExactlyMatch.isChecked();
-
-                        lastSearchQuery = find;
-                        lastReplaceWith = replace;
-                        lastMatchCase = matchCase;
-                        lastIsRegex = isRegex;
-                        lastExactlyMatch = exactlyMatch;
-
-                        List<String> scopeClasses;
-                        scopeClasses = new ArrayList<>();
-                        collectClassesRecursive(searchResults, scopeClasses);
-
-                        new ReplaceTask(SearchFragment.this, find, replace, type, matchCase, isRegex, exactlyMatch, scopeClasses).start();
+                        String find = etFind.getText().toString(), replace = etReplaceWith.getText().toString(), type = spinnerSearchType.getSelectedItem().toString();
+                        lastSearchQuery = find; lastReplaceWith = replace; lastMatchCase = cbMatchCase.isChecked(); lastIsRegex = cbRegex.isChecked(); lastExactlyMatch = cbExactlyMatch.isChecked();
+                        List<String> scopeClasses = new ArrayList<>();
+                        collectClassFullNames(searchResults, scopeClasses);
+                        new ReplaceTask(SearchFragment.this, find, replace, type, lastMatchCase, lastIsRegex, lastExactlyMatch, scopeClasses).start();
                     }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void collectClassesRecursive(List<TreeNode> nodes, List<String> classes) {
-        for (TreeNode node : nodes) {
-            if (!node.isDirectory() && !node.isSnippet()) {
-                classes.add(node.getFullName());
-            }
-            collectClassesRecursive(node.getChildren(), classes);
-        }
-    }
 
     /**
      * ReplaceTask: Handles global string/smali replacements.
@@ -701,7 +641,7 @@ public class SearchFragment extends Fragment {
         private final AtomicInteger replacedCount = new AtomicInteger(0);
         private final AtomicInteger affectedClasses = new AtomicInteger(0);
         private final AtomicInteger processedCount = new AtomicInteger(0);
-        private final com.android.tools.smali.baksmali.BaksmaliOptions baksmaliOptions = new com.android.tools.smali.baksmali.BaksmaliOptions();
+        private final BaksmaliOptions baksmaliOptions = new BaksmaliOptions();
         private final Map<String, String> openTabsContent = new HashMap<>();
         private final Map<String, String> replacedTabsContent = new ConcurrentHashMap<>();
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -931,14 +871,12 @@ public class SearchFragment extends Fragment {
         }
 
         private String generateSmali(ClassDef classDef) throws Exception {
-            if (DexEditorActivity.classTree != null) {
-                return DexEditorActivity.classTree.getSmaliByType(classDef);
-            }
-            StringWriter stringWriter = new StringWriter();
-            BaksmaliWriter baksmaliWriter = new BaksmaliWriter(stringWriter);
-            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(baksmaliOptions, classDef).writeTo(baksmaliWriter);
-            baksmaliWriter.close();
-            return stringWriter.toString();
+            if (DexEditorActivity.classTree != null) return DexEditorActivity.classTree.getSmaliByType(classDef);
+            StringWriter sw = new StringWriter();
+            BaksmaliWriter bw = new BaksmaliWriter(sw);
+            new com.android.tools.smali.baksmali.Adaptors.ClassDefinition(baksmaliOptions, classDef).writeTo(bw);
+            bw.close();
+            return sw.toString();
         }
 
         @SuppressLint("NotifyDataSetChanged")
@@ -973,6 +911,7 @@ public class SearchFragment extends Fragment {
             DexEditorActivity.isChanged = true;
         }
 
+        // there is some problem with replacement , i have to review this part next time but serach metod you should try
         private void showErrorDialog(DexEditorActivity activity) {
             StringBuilder sb = new StringBuilder("The following classes could not be assembled after replacement:\n\n");
             synchronized (errorClasses) {
@@ -1014,36 +953,27 @@ public class SearchFragment extends Fragment {
      * 3. Efficient Matching: Case-insensitive search without new string allocations.
      */
     private static class SearchTask {
-        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = ThreadLocal.withInitial(BaksmaliOptions::new);
-        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = ThreadLocal.withInitial(() -> new StringBuilder(64 * 1024));
+        private static final ThreadLocal<BaksmaliOptions> OPTIONS_THREAD_LOCAL = new ThreadLocal<BaksmaliOptions>() {
+            @Override protected BaksmaliOptions initialValue() { return new BaksmaliOptions(); }
+        };
+        private static final ThreadLocal<StringBuilder> BUFFER_THREAD_LOCAL = new ThreadLocal<StringBuilder>() {
+            @Override protected StringBuilder initialValue() { return new StringBuilder(64 * 1024); }
+        };
 
         private final WeakReference<SearchFragment> fragmentRef;
-        private final String query;
-        private final String path;
-        private final String type;
-        private final boolean searchSubfolders;
-        private final boolean matchCase;
-        private final boolean isRegex;
-        private final boolean exactlyMatch;
-        private final List<String> scopeClasses;
+        private final String query, path, type, highlightQuery;
+        private final boolean searchSubfolders, matchCase, isRegex, exactlyMatch, finalIsNumberValid;
+        private final List<String> scopeClasses, excludeList = new ArrayList<>();
         private final Pattern compiledPattern;
         private final long finalTargetValue;
-        private final boolean finalIsNumberValid;
-        private final String highlightQuery;
-        private final AtomicInteger foundCount = new AtomicInteger(0);
-        private final AtomicInteger processedCount = new AtomicInteger(0);
-        private final List<String> excludeList = new ArrayList<>();
+        private final AtomicInteger foundCount = new AtomicInteger(0), processedCount = new AtomicInteger(0);
         private final Handler mainHandler = new Handler(Looper.getMainLooper());
         private final Map<String, String> openEditorsContent = new HashMap<>();
-
-        // Cache for DEX pool match results to avoid redundant scans
         private final Map<Integer, Boolean> dexMatchCache = new ConcurrentHashMap<>();
-        private final java.util.Set<String> smaliKeywords = new java.util.HashSet<>();
-
+        private final Set<String> smaliKeywords = new java.util.HashSet<>();
         private AlertProgress progressDialog;
-        private volatile boolean isStopped = false;
-        private volatile boolean warningShown = false;
-        private volatile boolean hasConfirmedLargeSearch = false;
+        private volatile boolean isStopped = false, warningShown = false, hasConfirmedLargeSearch = false;
+        private final AtomicBoolean isFinalized = new AtomicBoolean(false);
         private long lastProgressUpdateTime = 0;
         private ExecutorService executor;
 
@@ -1065,22 +995,17 @@ public class SearchFragment extends Fragment {
             String hq = query;
             if (type.equals("Integer")) {
                 try {
-                    String cleanQuery = query.trim();
+                    String q = query.trim();
                     if (isHex) {
-                        if (cleanQuery.startsWith("0x")) cleanQuery = cleanQuery.substring(2);
-                        targetValue = Long.parseLong(cleanQuery, 16);
-                        hq = "0x" + cleanQuery.toLowerCase();
+                        if (q.startsWith("0x")) q = q.substring(2);
+                        targetValue = Long.parseLong(q, 16);
+                        hq = "0x" + q.toLowerCase();
                     } else {
-                        targetValue = Long.parseLong(cleanQuery);
-                        if (targetValue >= Integer.MIN_VALUE && targetValue <= Integer.MAX_VALUE) {
-                            hq = "0x" + Integer.toHexString((int) targetValue).toLowerCase();
-                        } else {
-                            hq = "0x" + Long.toHexString(targetValue).toLowerCase();
-                        }
+                        targetValue = Long.parseLong(q);
+                        hq = "0x" + (targetValue >= Integer.MIN_VALUE && targetValue <= Integer.MAX_VALUE ? Integer.toHexString((int) targetValue) : Long.toHexString(targetValue)).toLowerCase();
                     }
                     isNumberValid = true;
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             }
             this.finalTargetValue = targetValue;
             this.finalIsNumberValid = isNumberValid;
@@ -1088,28 +1013,15 @@ public class SearchFragment extends Fragment {
 
             SearchFragment frag = fragmentRef.get();
             if (frag != null && useExcludeList && (this.path.equals("/") || this.path.isEmpty())) {
-                android.content.SharedPreferences prefs = frag.requireContext().getSharedPreferences("search_prefs", android.content.Context.MODE_PRIVATE);
-                String savedExcludes = prefs.getString("exclude_list", "");
+                String savedExcludes = frag.requireContext().getSharedPreferences("search_prefs", android.content.Context.MODE_PRIVATE).getString("exclude_list", "");
                 if (!savedExcludes.isEmpty()) {
                     for (String s : savedExcludes.split("\n")) {
-                        String trimmed = s.trim();
-                        if (!trimmed.isEmpty()) excludeList.add(trimmed);
+                        String t = s.trim();
+                        if (!t.isEmpty()) excludeList.add(t);
                     }
                 }
             }
-
-            if (isRegex) {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
-                Pattern p;
-                try {
-                    p = Pattern.compile(query, flags);
-                } catch (Exception e) {
-                    p = null;
-                }
-                this.compiledPattern = p;
-            } else {
-                this.compiledPattern = null;
-            }
+            this.compiledPattern = isRegex ? Pattern.compile(query, matchCase ? 0 : Pattern.CASE_INSENSITIVE) : null;
         }
 
         private void initSmaliKeywords() {
@@ -1131,7 +1043,9 @@ public class SearchFragment extends Fragment {
             DexEditorActivity activity = (DexEditorActivity) fragment.getActivity();
             if (activity == null) return;
 
-            // Prepare the progress dialog - search can take time on large DEX files
+            final List<TreeNode> results = Collections.synchronizedList(new ArrayList<>());
+
+            // Prepare the progress dialog
             progressDialog = new AlertProgress(activity);
             progressDialog.setTitle("Searching...");
             progressDialog.setMessage("Found: 0");
@@ -1139,8 +1053,17 @@ public class SearchFragment extends Fragment {
             progressDialog.setOnCancelListener(new AlertProgress.OnCancelListener() {
                 @Override
                 public void onCancel() {
-                    isStopped = true;
-                    if (executor != null) executor.shutdownNow();
+                    if (isFinalized.compareAndSet(false, true)) {
+                        isStopped = true;
+                        if (executor != null) executor.shutdownNow();
+                        // On cancel/back press, show what was found so far
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                finalizeResults(results);
+                            }
+                        }).start();
+                    }
                 }
             });
             progressDialog.show();
@@ -1161,12 +1084,11 @@ public class SearchFragment extends Fragment {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    final List<TreeNode> results = Collections.synchronizedList(new ArrayList<>());
                     if (DexEditorActivity.classTree == null) {
                         mainHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                onPostExecute(results);
+                                onPostExecute(new ArrayList<>());
                             }
                         });
                         return;
@@ -1263,6 +1185,9 @@ public class SearchFragment extends Fragment {
                                     }
                                 }
 
+                                // Class name is simple search
+                                // only search the class node
+                                // so its always faster
                                 if (type.equals("Class name")) {
                                     String clsNamePart = className.contains("/") ? className.substring(className.lastIndexOf('/') + 1) : className;
                                     boolean match = false;
@@ -1291,16 +1216,16 @@ public class SearchFragment extends Fragment {
                                     case "Smali":
                                         try {
                                             String openContent = openEditorsContent.get(className);
-                                            boolean hasPending = DexEditorActivity.classTree.getPendingSmaliMap().containsKey(className);
 
                                             if (openContent != null) {
                                                 smali = openContent;
                                             } else {
                                                 // POOL-BASED PRE-FILTERING (Ultra Fast Optimization)
                                                 // If query isn't in the DEX string pool and isn't a Smali keyword, skip the class.
+                                                // Look we're using pre-filtering method to detect the search result for smali whoich may affect serach speed when there is large classes or small classes
                                                 if (!isRegex && query.length() >= 3 && !isCommonSmaliWord(query)) {
-                                                    if (classDef instanceof com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef) {
-                                                        com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile dex = ((com.android.tools.smali.dexlib2.dexbacked.DexBackedClassDef) classDef).dexFile;
+                                                    if (classDef instanceof DexBackedClassDef) {
+                                                        DexBackedDexFile dex = ((DexBackedClassDef) classDef).dexFile;
                                                         if (!checkDexPool(dex, query, matchCase)) {
                                                             updateProgress(processedCount.incrementAndGet(), finalTotal);
                                                             return;
@@ -1310,16 +1235,14 @@ public class SearchFragment extends Fragment {
                                                 smali = generateSmali(classDef);
                                             }
 
-                                            if (smali != null) {
-                                                // Fast-path match check
-                                                if (!isRegex && !query.contains("\n")) {
-                                                    if (!checkMatch(smali)) {
-                                                        updateProgress(processedCount.incrementAndGet(), finalTotal);
-                                                        return;
-                                                    }
+                                            if (!isRegex && !query.contains("\n")) {
+                                                if (!checkMatch(smali)) {
+                                                    updateProgress(processedCount.incrementAndGet(), finalTotal);
+                                                    return;
                                                 }
+                                            }
 
-                                                if (isRegex || query.contains("\n")) {
+                                            if (isRegex || query.contains("\n")) {
                                                     Pattern pattern = isRegex ? compiledPattern : Pattern.compile(Pattern.quote(query), matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                                                     java.util.regex.Matcher matcher = pattern.matcher(smali);
                                                     while (matcher.find()) {
@@ -1368,49 +1291,40 @@ public class SearchFragment extends Fragment {
                                                         snippet.setLineNumber(lineIdx);
                                                         snippets.add(snippet);
                                                         match = true;
-                                                    }
                                                 }
                                             }
-                                        } catch (Exception ignored) {
-                                        }
+                                        } catch (Exception ignored) {}
                                         break;
                                     case "Field name":
-                                        for (com.android.tools.smali.dexlib2.iface.Field field : classDef.getFields()) {
+                                        for (Field field : classDef.getFields()) {
                                             if (checkMatch(field.getName())) {
-                                                if (foundCount.incrementAndGet() >= 250000) {
-                                                    stopSearchWithLimit(activity);
-                                                    return;
-                                                }
-                                                if (smali == null)
-                                                    smali = generateSmaliSafe(classDef);
+                                                if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                                if (smali == null) smali = generateSmaliSafe(classDef);
                                                 String snippetText = ".field " + AccessFlags.formatAccessFlagsForField(field.getAccessFlags()) + " " + field.getName() + ":" + field.getType();
                                                 int lineIdx = findLineOfText(smali, field.getName());
                                                 TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                 snippet.setSnippet(true);
                                                 snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                preHighlightSnippet(snippet, highlightQuery);
                                                 snippets.add(snippet);
                                                 match = true;
                                             }
                                         }
                                         break;
                                     case "Method name":
-                                        for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
+                                        for (Method method : classDef.getMethods()) {
                                             if (checkMatch(method.getName())) {
-                                                if (foundCount.incrementAndGet() >= 250000) {
-                                                    stopSearchWithLimit(activity);
-                                                    return;
-                                                }
-                                                if (smali == null)
-                                                    smali = generateSmaliSafe(classDef);
+                                                if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                                if (smali == null) smali = generateSmaliSafe(classDef);
                                                 StringBuilder desc = new StringBuilder("(");
-                                                for (com.android.tools.smali.dexlib2.iface.MethodParameter param : method.getParameters())
-                                                    desc.append(param.getType());
+                                                for (MethodParameter param : method.getParameters()) desc.append(param.getType());
                                                 desc.append(")").append(method.getReturnType());
                                                 String snippetText = ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName() + desc;
                                                 int lineIdx = findLineOfText(smali, ".method " + AccessFlags.formatAccessFlagsForMethod(method.getAccessFlags()) + " " + method.getName());
                                                 TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                 snippet.setSnippet(true);
                                                 snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                preHighlightSnippet(snippet, highlightQuery);
                                                 snippets.add(snippet);
                                                 match = true;
                                             }
@@ -1430,31 +1344,35 @@ public class SearchFragment extends Fragment {
                                                             stopSearchWithLimit(activity);
                                                             return;
                                                         }
+                                                        TreeNode snippet = new TreeNode(lineText.trim(), className, 0, false);
+                                                        snippet.setSnippet(true);
+                                                        snippet.setLineNumber(countLinesBefore(smali, start));
+                                                        preHighlightSnippet(snippet, highlightQuery);
+                                                        snippets.add(snippet);
+                                                        match = true;
                                                     }
+                                                    start = end + 1;
                                                 }
                                             } catch (Exception ignored) {
                                             }
                                         } else {
-                                            for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
-                                                com.android.tools.smali.dexlib2.iface.MethodImplementation impl = method.getImplementation();
+                                            for (Method method : classDef.getMethods()) {
+                                                MethodImplementation impl = method.getImplementation();
                                                 if (impl != null) {
-                                                    for (com.android.tools.smali.dexlib2.iface.instruction.Instruction inst : impl.getInstructions()) {
-                                                        if (inst instanceof com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction) {
-                                                            com.android.tools.smali.dexlib2.iface.reference.Reference ref = ((com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction) inst).getReference();
-                                                            if (ref instanceof com.android.tools.smali.dexlib2.iface.reference.StringReference) {
-                                                                String str = ((com.android.tools.smali.dexlib2.iface.reference.StringReference) ref).getString();
+                                                    for (Instruction inst : impl.getInstructions()) {
+                                                        if (inst instanceof ReferenceInstruction) {
+                                                            Reference ref = ((ReferenceInstruction) inst).getReference();
+                                                            if (ref instanceof StringReference) {
+                                                                String str = ((StringReference) ref).getString();
                                                                 if (checkMatch(str)) {
-                                                                    if (foundCount.incrementAndGet() >= 250000) {
-                                                                        stopSearchWithLimit(activity);
-                                                                        return;
-                                                                    }
-                                                                    if (smali == null)
-                                                                        smali = generateSmaliSafe(classDef);
+                                                                    if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                                                    if (smali == null) smali = generateSmaliSafe(classDef);
                                                                     String snippetText = inst.getOpcode().name + " ..., \"" + str + "\"";
                                                                     int lineIdx = findLineOfText(smali, "\"" + str + "\"");
                                                                     TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                                     snippet.setSnippet(true);
                                                                     snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                                    preHighlightSnippet(snippet, highlightQuery);
                                                                     snippets.add(snippet);
                                                                     match = true;
                                                                 }
@@ -1463,65 +1381,49 @@ public class SearchFragment extends Fragment {
                                                     }
                                                 }
                                             }
-                                            for (com.android.tools.smali.dexlib2.iface.Field field : classDef.getFields()) {
-                                                com.android.tools.smali.dexlib2.iface.value.EncodedValue initialValue = field.getInitialValue();
-                                                if (initialValue instanceof com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) {
-                                                    String str = ((com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) initialValue).getValue();
+                                            for (Field field : classDef.getFields()) {
+                                                EncodedValue initialValue = field.getInitialValue();
+                                                if (initialValue instanceof StringEncodedValue) {
+                                                    String str = ((StringEncodedValue) initialValue).getValue();
                                                     if (checkMatch(str)) {
-                                                        if (foundCount.incrementAndGet() >= 250000) {
-                                                            stopSearchWithLimit(activity);
-                                                            return;
-                                                        }
-                                                        if (smali == null)
-                                                            smali = generateSmaliSafe(classDef);
+                                                        if (foundCount.incrementAndGet() >= 250000) { stopSearchWithLimit(activity); return; }
+                                                        if (smali == null) smali = generateSmaliSafe(classDef);
                                                         String snippetText = ".field ... " + field.getName() + " = \"" + str + "\"";
                                                         int lineIdx = findLineOfText(smali, field.getName());
                                                         TreeNode snippet = new TreeNode(snippetText, className, 0, false);
                                                         snippet.setSnippet(true);
                                                         snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
+                                                        preHighlightSnippet(snippet, highlightQuery);
                                                         snippets.add(snippet);
                                                         match = true;
                                                     }
                                                 }
                                             }
-                                            if (searchInAnnotations(classDef.getAnnotations(), className, snippets))
-                                                match = true;
+                                            if (searchInAnnotations(classDef.getAnnotations(), className, snippets)) match = true;
                                         }
                                         break;
                                     case "Integer":
                                         boolean hasMatched = false;
-                                        for (com.android.tools.smali.dexlib2.iface.Method method : classDef.getMethods()) {
-                                            com.android.tools.smali.dexlib2.iface.MethodImplementation impl = method.getImplementation();
+                                        for (Method method : classDef.getMethods()) {
+                                            MethodImplementation impl = method.getImplementation();
                                             if (impl != null) {
-                                                for (com.android.tools.smali.dexlib2.iface.instruction.Instruction inst : impl.getInstructions()) {
-                                                    if (inst instanceof com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction) {
-                                                        if (((com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction) inst).getNarrowLiteral() == (int) finalTargetValue) {
-                                                            hasMatched = true;
-                                                            break;
-                                                        }
-                                                    } else if (inst instanceof com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction) {
-                                                        if (((com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction) inst).getWideLiteral() == finalTargetValue) {
-                                                            hasMatched = true;
-                                                            break;
-                                                        }
+                                                for (Instruction inst : impl.getInstructions()) {
+                                                    if (inst instanceof NarrowLiteralInstruction) {
+                                                        if (((NarrowLiteralInstruction) inst).getNarrowLiteral() == (int) finalTargetValue) { hasMatched = true; break; }
+                                                    } else if (inst instanceof WideLiteralInstruction) {
+                                                        if (((WideLiteralInstruction) inst).getWideLiteral() == finalTargetValue) { hasMatched = true; break; }
                                                     }
                                                 }
                                             }
                                             if (hasMatched) break;
                                         }
                                         if (!hasMatched) {
-                                            for (com.android.tools.smali.dexlib2.iface.Field field : classDef.getFields()) {
-                                                com.android.tools.smali.dexlib2.iface.value.EncodedValue initialValue = field.getInitialValue();
-                                                if (initialValue instanceof com.android.tools.smali.dexlib2.iface.value.IntEncodedValue) {
-                                                    if (((com.android.tools.smali.dexlib2.iface.value.IntEncodedValue) initialValue).getValue() == (int) finalTargetValue) {
-                                                        hasMatched = true;
-                                                        break;
-                                                    }
-                                                } else if (initialValue instanceof com.android.tools.smali.dexlib2.iface.value.LongEncodedValue) {
-                                                    if (((com.android.tools.smali.dexlib2.iface.value.LongEncodedValue) initialValue).getValue() == finalTargetValue) {
-                                                        hasMatched = true;
-                                                        break;
-                                                    }
+                                            for (Field field : classDef.getFields()) {
+                                                EncodedValue initialValue = field.getInitialValue();
+                                                if (initialValue instanceof IntEncodedValue) {
+                                                    if (((IntEncodedValue) initialValue).getValue() == (int) finalTargetValue) { hasMatched = true; break; }
+                                                } else if (initialValue instanceof LongEncodedValue) {
+                                                    if (((LongEncodedValue) initialValue).getValue() == finalTargetValue) { hasMatched = true; break; }
                                                 }
                                             }
                                         }
@@ -1545,6 +1447,7 @@ public class SearchFragment extends Fragment {
                                                         TreeNode snippet = new TreeNode(line.trim(), className, 0, false);
                                                         snippet.setSnippet(true);
                                                         snippet.setLineNumber(i);
+                                                        preHighlightSnippet(snippet, highlightQuery);
                                                         snippets.add(snippet);
                                                         match = true;
                                                     }
@@ -1574,14 +1477,48 @@ public class SearchFragment extends Fragment {
                     } catch (InterruptedException ignored) {
                     }
 
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onPostExecute(results);
-                        }
-                    });
+                    if (isFinalized.compareAndSet(false, true)) {
+                        finalizeResults(results);
+                    }
                 }
             }).start();
+        }
+
+        private void finalizeResults(List<TreeNode> results) {
+            // Sort and build tree in background
+            List<TreeNode> tree;
+            if (results.isEmpty()) {
+                tree = new ArrayList<>();
+            } else {
+                // To avoid ConcurrentModificationException if a thread is still finishing
+                List<TreeNode> snapshot;
+                synchronized (Collections.unmodifiableList(results)) {
+                    snapshot = new ArrayList<>(results);
+                }
+                
+                snapshot.sort(new Comparator<TreeNode>() {
+                    @Override
+                    public int compare(TreeNode n1, TreeNode n2) {
+                        return n1.getFullName().compareTo(n2.getFullName());
+                    }
+                });
+
+                tree = buildTreeStructure(snapshot);
+                tree.sort(new Comparator<TreeNode>() {
+                    @Override
+                    public int compare(TreeNode n1, TreeNode n2) {
+                        if (n1.isDirectory() != n2.isDirectory()) return n1.isDirectory() ? -1 : 1;
+                        return n1.getName().compareTo(n2.getName());
+                    }
+                });
+            }
+
+            mainHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    onPostExecute(tree);
+                }
+            });
         }
 
         private void stopSearchWithLimit(final DexEditorActivity activity) {
@@ -1593,7 +1530,7 @@ public class SearchFragment extends Fragment {
                     public void run() {
                         if (progressDialog != null && progressDialog.isShowing())
                             progressDialog.dismiss();
-                        SketchwareUtil.showMessage(activity, "Search cancelled: Too many results (> 250,000)");
+                        SketchwareUtil.showMessage(activity, "The number of serach results exceeds the limit, the search has been stopped");
                     }
                 });
             }
@@ -1616,39 +1553,19 @@ public class SearchFragment extends Fragment {
             }
         }
 
-        // match the highlited region
         private boolean checkMatchInRange(String text, int start, int end) {
-            if (isRegex) {
-                if (compiledPattern == null) return false;
-                return compiledPattern.matcher(text.substring(start, end)).find();
-            }
-            if (matchCase) {
-                if (exactlyMatch)
-                    return (end - start == query.length()) && text.regionMatches(false, start, query, 0, query.length());
-                for (int i = start; i <= end - query.length(); i++)
-                    if (text.regionMatches(false, i, query, 0, query.length())) return true;
-                return false;
-            } else {
-                if (exactlyMatch)
-                    return (end - start == query.length()) && text.regionMatches(true, start, query, 0, query.length());
-                for (int i = start; i <= end - query.length(); i++)
-                    if (text.regionMatches(true, i, query, 0, query.length())) return true;
-                return false;
-            }
+            if (isRegex) return compiledPattern != null && compiledPattern.matcher(text.substring(start, end)).find();
+            boolean ignoreCase = !matchCase;
+            if (exactlyMatch) return (end - start == query.length()) && text.regionMatches(ignoreCase, start, query, 0, query.length());
+            for (int i = start; i <= end - query.length(); i++)
+                if (text.regionMatches(ignoreCase, i, query, 0, query.length())) return true;
+            return false;
         }
 
         private boolean checkMatch(String text) {
-            if (isRegex) {
-                if (compiledPattern == null) return false;
-                return compiledPattern.matcher(text).find();
-            }
-            if (matchCase) {
-                if (exactlyMatch) return text.equals(query);
-                return text.contains(query);
-            } else {
-                if (exactlyMatch) return text.equalsIgnoreCase(query);
-                return containsIgnoreCase(text, query);
-            }
+            if (isRegex) return compiledPattern != null && compiledPattern.matcher(text).find();
+            if (matchCase) return exactlyMatch ? text.equals(query) : text.contains(query);
+            return exactlyMatch ? text.equalsIgnoreCase(query) : containsIgnoreCase(text, query);
         }
 
         private boolean isCommonSmaliWord(String query) {
@@ -1679,8 +1596,7 @@ public class SearchFragment extends Fragment {
         }
 
         private boolean contains(String text, String query, boolean matchCase) {
-            if (text == null) return false;
-            return matchCase ? text.contains(query) : containsIgnoreCase(text, query);
+            return text != null && (matchCase ? text.contains(query) : containsIgnoreCase(text, query));
         }
 
         private String generateSmaliOptimized(ClassDef classDef) throws Exception {
@@ -1771,6 +1687,7 @@ public class SearchFragment extends Fragment {
                     TreeNode snippet = new TreeNode("Annotation: " + name + " = \"" + str + "\"", className, 0, false);
                     snippet.setSnippet(true);
                     snippet.setLineNumber(1);
+                    preHighlightSnippet(snippet, highlightQuery);
                     snippets.add(snippet);
                     matched = true;
                 }
@@ -1786,6 +1703,38 @@ public class SearchFragment extends Fragment {
                 }
             }
             return matched;
+        }
+
+        private void preHighlightSnippet(TreeNode node, String query) {
+            if (query == null || query.isEmpty()) return;
+            String text = node.getName();
+            String lowerText = text.toLowerCase();
+            String lowerQuery = query.toLowerCase();
+            int firstMatch = lowerText.indexOf(lowerQuery);
+
+            if (firstMatch != -1) {
+                // Priority to highlighted part: center it in the snippet
+                int contextBefore = 40;
+                int contextAfter = 60;
+                int startLimit = Math.max(0, firstMatch - contextBefore);
+                int endLimit = Math.min(text.length(), firstMatch + query.length() + contextAfter);
+
+                String prefix = (startLimit > 0) ? "..." : "";
+                String suffix = (endLimit < text.length()) ? "..." : "";
+                String displayText = prefix + text.substring(startLimit, endLimit).replace("\n", " ").replace("\r", " ") + suffix;
+                
+                SpannableString spannable = new SpannableString(displayText);
+                String lowerDisplay = displayText.toLowerCase();
+                int s = 0;
+                while ((s = lowerDisplay.indexOf(lowerQuery, s)) != -1) {
+                    spannable.setSpan(new BackgroundColorSpan(0xFFB3E5FC), s, s + query.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    s += query.length();
+                }
+                node.setCachedSpannedName(spannable);
+            } else {
+                String cleanText = text.replace("\n", " ").replace("\r", " ");
+                node.setCachedSpannedName(cleanText);
+            }
         }
 
         private boolean containsIgnoreCase(String str, String searchStr) {
@@ -1827,28 +1776,14 @@ public class SearchFragment extends Fragment {
                     .show();
         }
 
-        private void onPostExecute(final List<TreeNode> results) {
-            if (progressDialog.isShowing()) progressDialog.dismiss();
+        private void onPostExecute(final List<TreeNode> tree) {
+            if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
             SearchFragment fragment = fragmentRef.get();
             if (fragment == null) return;
             fragment.currentQuery = query;
             final DexEditorActivity activity = (DexEditorActivity) fragment.getActivity();
             if (activity != null) {
                 activity.searchNodes.clear();
-                results.sort(new Comparator<TreeNode>() {
-                    @Override
-                    public int compare(TreeNode n1, TreeNode n2) {
-                        return n1.getFullName().compareTo(n2.getFullName());
-                    }
-                });
-                List<TreeNode> tree = buildTreeStructure(results);
-                tree.sort(new Comparator<TreeNode>() {
-                    @Override
-                    public int compare(TreeNode n1, TreeNode n2) {
-                        if (n1.isDirectory() != n2.isDirectory()) return n1.isDirectory() ? -1 : 1;
-                        return n1.getName().compareTo(n2.getName());
-                    }
-                });
                 activity.searchNodes.addAll(tree);
                 fragment.updateSearchInfoBar();
                 fragment.updateUIState();
@@ -1886,6 +1821,7 @@ public class SearchFragment extends Fragment {
             return roots;
         }
 
+        
         private void sortChildrenRecursive(TreeNode node) {
             if (node.isDirectory()) {
                 node.getChildren().sort(new Comparator<TreeNode>() {

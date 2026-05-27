@@ -41,8 +41,6 @@ import android.app.Dialog;
 
 import modder.hub.dexeditor.views.AlertCircularProgress;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -70,7 +68,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -78,38 +75,28 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import modder.hub.dexeditor.GraphDot.DrawFlowDiagram;
 import modder.hub.dexeditor.GraphDot.Method;
 import modder.hub.dexeditor.R;
 import modder.hub.dexeditor.activity.AIOverViewActivity;
 import modder.hub.dexeditor.activity.DexEditorActivity;
-import modder.hub.dexeditor.activity.ImageViewerActivity;
-import modder.hub.dexeditor.activity.JavaViewActivity;
 import modder.hub.dexeditor.smali.Smali2Java;
 import modder.hub.dexeditor.smali.SmaliFieldAccessParser;
 import modder.hub.dexeditor.smali.SmaliMethodBody;
 import modder.hub.dexeditor.smali.SmaliMethodInvokeParser;
-import modder.hub.dexeditor.utils.FileUtil;
 import modder.hub.dexeditor.utils.Notify_MT;
 import modder.hub.dexeditor.utils.SketchwareUtil;
-import modder.hub.dexeditor.utils.SmaliHelper;
+import modder.hub.dexeditor.smali.SmaliHelper;
 import modder.hub.dexeditor.utils.UIHelper;
 import modder.hub.dexeditor.utils.ViewAnimationHelper;
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import modder.hub.dexeditor.views.FastScrollerRecyclerView;
 
 /*
 Author @developer-krushna
@@ -123,8 +110,8 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private int dexVersion;
     private int editorLineNumber;
     private String lineNumber;
-    private RecyclerView methodRecyclerView;
-    private RecyclerView stringsRecyclerView;
+    private FastScrollerRecyclerView methodRecyclerView;
+    private FastScrollerRecyclerView stringsRecyclerView;
     private Toolbar toolbar;
     private String savedMethodData = "";
     private String savedStringsData = "";
@@ -133,15 +120,18 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
     private String className = "";
     private List<HashMap<String, Object>> methodOrFieldInfo = new ArrayList<>();
     private List<HashMap<String, Object>> stringListInfo = new ArrayList<>();
-    private final Intent javaViewIntent = new Intent();
     private String fullClassName = "???";
     private final String smaliCallSyntax = "->";
+    private static Typeface monoTypeface;
+
+    private Typeface getMonoTypeface() {
+        if (monoTypeface == null && getActivity() != null) {
+            monoTypeface = Typeface.createFromAsset(getActivity().getAssets(), "fonts/mono.ttf");
+        }
+        return monoTypeface;
+    }
 
     private boolean isFirstLoad = true;
-
-    public static String extractSubstringAfterLastSlash(String str) {
-        return SmaliHelper.extractSimpleName(str);
-    }
 
     // Update the UI with the smali file path, class name, editor line number, and dex version
     public void updateUi(String smaliFilePath, String className, int editorLineNumber, int dexVersion) {
@@ -181,8 +171,6 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             getDialog().getWindow().requestFeature(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         }
 
-        new FastScrollerBuilder(methodRecyclerView).build();
-        new FastScrollerBuilder(stringsRecyclerView).build();
         ViewAnimationHelper.enableSwipeViewToggle(methodRecyclerView, stringsRecyclerView);
 
         toolbar.setTitle("Navigation");
@@ -418,6 +406,21 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
     // Convert Smali code to Java code for the given method
     public void smali2Java(String methodName) {
+        if (getActivity() instanceof DexEditorActivity) {
+            DexEditorActivity activity = (DexEditorActivity) getActivity();
+            String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
+            String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
+
+            // Check if tab already exists to avoid redundant decompilation
+            for (int i = 0; i < DexEditorActivity.tabs.size(); i++) {
+                DexEditorActivity.EditorTab tab = DexEditorActivity.tabs.get(i);
+                if (tab.className.equals(cleanedClassName) && tab.title.equals(title) && tab.type == 1) {
+                    activity.showEditor(i);
+                    dismiss();
+                    return;
+                }
+            }
+        }
         new Handler(Looper.getMainLooper()).postDelayed(new SmaliToJavaTask(methodName), 200L);
     }
 
@@ -710,7 +713,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             String methodOrFieldName = Objects.requireNonNull(item.get("MethodOrFieldName")).toString();
             String startLineNumber = Objects.requireNonNull(item.get("StartLineNumber")).toString();
 
-            holder.indexNameTextView.setTypeface(Typeface.createFromAsset(requireActivity().getAssets(), "fonts/mono.ttf"), Typeface.NORMAL);
+            holder.indexNameTextView.setTypeface(getMonoTypeface(), Typeface.NORMAL);
 
             LayerDrawable layerDrawable = (LayerDrawable) holder.backgroundLayout.getBackground();
             GradientDrawable dynamicBackground = (GradientDrawable) layerDrawable.findDrawableByLayerId(R.id.dynamic_background);
@@ -794,6 +797,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
 
                     // Set click listener for popup menu items
                     popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @SuppressLint("NewApi")
                         @Override
                         public boolean onMenuItemClick(MenuItem menuItem) {
                             switch (menuItem.getItemId()) {
@@ -911,7 +915,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
         }
     }
 
-    // Task to generate a method flowchart
+    // Task to generate a method flowchart using viz-js locally
     private class MethodFlowChartTask extends Thread {
         private final String methodName;
 
@@ -924,7 +928,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             try {
                 ArrayList<String> methodList = new ArrayList<>();
                 methodList.add(methodName);
-                DrawFlowDiagram drawFlowDiagram = new DrawFlowDiagram(smaliFilePath, "png", methodList.toArray(new String[0]), "", "");
+                DrawFlowDiagram drawFlowDiagram = new DrawFlowDiagram(smaliFilePath, methodList.toArray(new String[0]));
                 drawFlowDiagram.run();
 
                 requireActivity().runOnUiThread(new Runnable() {
@@ -933,45 +937,12 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                         for (Method method : drawFlowDiagram.getClassInSmali().getMethodDict().values()) {
                             final String dotDiagram = drawFlowDiagram.drawMethodFlowDiagram(method);
                             showProgressDialog(false); // Hide progress dialog
-                            showSecondaryProgressDialog(true); // Show secondary progress dialog
 
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        Response response = new OkHttpClient().newCall(
-                                                new Request.Builder()
-                                                        .url("https://timscriptov.ru/graphviz/index.php")
-                                                        .post(new FormBody.Builder()
-                                                                .add("dot_diagram", dotDiagram)
-                                                                .build())
-                                                        .build()
-                                        ).execute();
-
-                                        if (!response.isSuccessful()) {
-                                            showSecondaryProgressDialog(false);
-                                            showExceptionDlg(new IOException("Unsuccessful response: " + response));
-                                        } else {
-                                            FileOutputStream fileOutputStream = new FileOutputStream(
-                                                    new File(requireActivity().getFilesDir(), "SmaliFlowChart.png")
-                                            );
-                                            if (response.body() != null) {
-                                                fileOutputStream.write(response.body().bytes());
-                                            }
-                                            fileOutputStream.close();
-                                            showSecondaryProgressDialog(false);
-
-                                            Intent intent = new Intent(requireContext().getApplicationContext(), ImageViewerActivity.class);
-                                            intent.putExtra("Title", className + "." + _getTextBefore(methodName, "("));
-                                            intent.putExtra("Subtitle", "(" + _getTextAfter(methodName, "("));
-                                            startActivity(intent);
-                                        }
-                                    } catch (IOException e) {
-                                        showSecondaryProgressDialog(false);
-                                        showExceptionDlg(e);
-                                    }
-                                }
-                            }).start();
+                            Intent intent = new Intent(requireContext().getApplicationContext(), modder.hub.dexeditor.activity.GraphViewActivity.class);
+                            intent.putExtra("Title", className + "." + _getTextBefore(methodName, "("));
+                            intent.putExtra("Subtitle", "(" + _getTextAfter(methodName, "("));
+                            intent.putExtra("dot", dotDiagram);
+                            startActivity(intent);
                         }
                     }
                 });
@@ -1018,16 +989,13 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
                     showProgressDialog(false); // Hide progress dialog
                     if (javaCode != null) {
                         try {
-                            // Save the converted Java code to a file
-                            String javaFilePath = requireActivity().getFilesDir() + "/Method2Java.java";
-                            FileUtil.writeFile(javaFilePath, javaCode);
-
-                            // Launch the JavaViewActivity to display the Java code
-                            javaViewIntent.setClass(requireContext().getApplicationContext(), JavaViewActivity.class);
-                            javaViewIntent.putExtra("Method2JavaTitle", className + "." + _getTextBefore(methodName, "("));
-                            javaViewIntent.putExtra("Method2JavaSubtitle", "(" + _getTextAfter(methodName, "("));
-                            javaViewIntent.putExtra("Method2JavaPath", javaFilePath);
-                            startActivity(javaViewIntent);
+                            if (getActivity() instanceof DexEditorActivity) {
+                                DexEditorActivity activity = (DexEditorActivity) getActivity();
+                                String cleanedClassName = SmaliHelper.smali2OnlySlash(fullClassName);
+                                String title = SmaliHelper.extractSimpleName(fullClassName) + "." + _getTextBefore(methodName, "(");
+                                activity.addTab(cleanedClassName, title, javaCode, 1);
+                                dismiss();
+                            }
                         } catch (Exception e) {
                             requireActivity().runOnUiThread(new Runnable() {
                                 @Override
@@ -1061,7 +1029,7 @@ public class SmaliMethodFieldListFragment extends DialogFragment {
             HashMap<String, Object> item = data.get(position);
             String stringName = Objects.requireNonNull(item.get("StringName")).toString();
             String startLineNumber = Objects.requireNonNull(item.get("StartLineNumber")).toString();
-            holder.indexNameTextView.setTypeface(Typeface.createFromAsset(requireActivity().getAssets(), "fonts/mono.ttf"), Typeface.NORMAL);
+            holder.indexNameTextView.setTypeface(getMonoTypeface(), Typeface.NORMAL);
             holder.indexNameContainer.setBackground(createHolderBackground(Color.parseColor("#40AD3E")));
             holder.indexNameTextView.setBackground(createHolderBackground(Color.parseColor("#40AD3E")));
             holder.stringTextView.setText(stringName);
