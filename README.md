@@ -111,6 +111,17 @@ A work-in-progress multifunctional advanced *Android **DEX** file editor* for An
 ## Join Telegram
 - [Coding Guys](https://t.me/coding_guys)
 
+## Star history
+## Star History
+
+<a href="https://www.star-history.com/?repos=developer-krushna%2FDex-Editor-Android&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=developer-krushna/Dex-Editor-Android&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=developer-krushna/Dex-Editor-Android&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=developer-krushna/Dex-Editor-Android&type=date&legend=top-left" />
+ </picture>
+</a>
+
 # License and Usage Restrictions
 
 This project is released under the Apache License, Version 2.0. However, please note the following restriction regarding the usage of this code:
