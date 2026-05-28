@@ -1399,7 +1399,7 @@ public class SearchFragment extends Fragment {
                                                     }
                                                 }
                                             }
-                                            if (searchInAnnotations(classDef.getAnnotations(), className, snippets)) match = true;
+                                            if (searchInAnnotations(classDef.getAnnotations(), className, snippets, smali, classDef)) match = true;
                                         }
                                         break;
                                     case "Integer":
@@ -1666,39 +1666,42 @@ public class SearchFragment extends Fragment {
             return countLinesBefore(smali, pos);
         }
 
-        private boolean searchInAnnotations(java.util.Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> annotations, String className, List<TreeNode> snippets) {
+        private boolean searchInAnnotations(java.util.Set<? extends com.android.tools.smali.dexlib2.iface.Annotation> annotations, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
             if (annotations == null) return false;
             boolean matched = false;
             for (com.android.tools.smali.dexlib2.iface.Annotation annotation : annotations) {
                 for (com.android.tools.smali.dexlib2.iface.AnnotationElement element : annotation.getElements()) {
-                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets))
+                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
                         matched = true;
                 }
             }
             return matched;
         }
 
-        private boolean collectAnnotationMatches(String name, com.android.tools.smali.dexlib2.iface.value.EncodedValue value, String className, List<TreeNode> snippets) {
+        private boolean collectAnnotationMatches(String name, com.android.tools.smali.dexlib2.iface.value.EncodedValue value, String className, List<TreeNode> snippets, String smali, ClassDef classDef) {
             boolean matched = false;
             if (value instanceof com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) {
                 String str = ((com.android.tools.smali.dexlib2.iface.value.StringEncodedValue) value).getValue();
                 if (checkMatch(str)) {
                     if (foundCount.incrementAndGet() >= 250000) return true;
-                    TreeNode snippet = new TreeNode("Annotation: " + name + " = \"" + str + "\"", className, 0, false);
+                    String currentSmali = smali;
+                    if (currentSmali == null) currentSmali = generateSmaliSafe(classDef);
+                    int lineIdx = findLineOfText(currentSmali, "\"" + str + "\"");
+                    TreeNode snippet = new TreeNode(name + " = \"" + str + "\"", className, 0, false);
                     snippet.setSnippet(true);
-                    snippet.setLineNumber(1);
+                    snippet.setLineNumber(lineIdx != -1 ? lineIdx : 0);
                     preHighlightSnippet(snippet, highlightQuery);
                     snippets.add(snippet);
                     matched = true;
                 }
             } else if (value instanceof com.android.tools.smali.dexlib2.iface.value.AnnotationEncodedValue) {
                 for (com.android.tools.smali.dexlib2.iface.AnnotationElement element : ((com.android.tools.smali.dexlib2.iface.value.AnnotationEncodedValue) value).getElements()) {
-                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets))
+                    if (collectAnnotationMatches(element.getName(), element.getValue(), className, snippets, smali, classDef))
                         matched = true;
                 }
             } else if (value instanceof com.android.tools.smali.dexlib2.iface.value.ArrayEncodedValue) {
                 for (com.android.tools.smali.dexlib2.iface.value.EncodedValue subValue : ((com.android.tools.smali.dexlib2.iface.value.ArrayEncodedValue) value).getValue()) {
-                    if (collectAnnotationMatches(name, subValue, className, snippets))
+                    if (collectAnnotationMatches(name, subValue, className, snippets, smali, classDef))
                         matched = true;
                 }
             }
