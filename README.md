@@ -62,8 +62,41 @@ A work-in-progress multifunctional advanced *Android **DEX** file editor* for An
 
 ### Download sample app
 [Dex Editor +](https://github.com/developer-krushna/Dex-Editor-Android/releases/tag/v1.3_final)
-## Watch a quick video
-https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186-e789-44f6-bdc3-180fc3e3e0c9
+## Project Previews
+
+<table align="center">
+  <tr>
+    <td align="center" width="300">
+      <b>TreeView</b><br>
+      <video src="https://github.com/user-attachments/assets/140ecd9d-91b6-40ac-a707-708bbfa5a3e8" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+    <td align="center" width="300">
+      <b>Smali Editor</b><br>
+      <video src="https://github.com/user-attachments/assets/41870c53-7113-43d9-accf-227b45bf157a" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="300">
+      <b>Explorer</b></b><br>
+      <video src="https://github.com/user-attachments/assets/e03686d3-2d16-4cf9-a17f-e64298f89709" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+    <td align="center" width="300">
+      <b>Smali Search</b><br>
+      <video src="https://github.com/user-attachments/assets/0737480c-8cc7-43f5-b672-660f02b9599b" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="300">
+      <b>Editor Functions</b><br>
+      <video src="https://github.com/user-attachments/assets/dc4bd627-9121-4a25-8170-c2db14acf817" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+    <td align="center" width="300">
+      <b>Old Video</b><br>
+      <video src="https://github.com/developer-krushna/Dex-Editor-Android/assets/76234660/1ad73186-e789-44f6-bdc3-180fc3e3e0c9" width="100%" height="600" style="width: 100%; height: 600px;" controls></video>
+    </td>
+  </tr>
+</table>
+
 ## Special thanks to
 - MT Manager Developer (All logics and UIs idea copied from MT Manager)
 - [Timscriptov](https://github.com/timscriptov) for helping me in the development of Smali method flow diagram, and also thanks for making server rest api …I am really indebted to him ♥️
