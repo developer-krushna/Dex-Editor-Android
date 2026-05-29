@@ -110,8 +110,7 @@ A work-in-progress multifunctional advanced *Android **DEX** file editor* for An
 
 ## Join Telegram
 - [Coding Guys](https://t.me/coding_guys)
-
-## Star history
+  
 ## Star History
 
 <a href="https://www.star-history.com/?repos=developer-krushna%2FDex-Editor-Android&type=date&legend=top-left">
