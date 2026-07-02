@@ -903,7 +903,7 @@ public class SearchFragment extends Fragment {
         @SuppressLint("NotifyDataSetChanged")
         private void onPostExecute(DexEditorActivity activity) {
             if (progressDialog.isShowing()) progressDialog.dismiss();
-            Notify_MT.Notify(activity, "Info", "Total replaced " + replacedCount.get() + "times in " + affectedClasses.get() + "classes." , "Close");
+            Notify_MT.Notify(activity, "Info", "Total replaced " + replacedCount.get() + " times in " + affectedClasses.get() + " classes." , "Close");
             if (!errorClasses.isEmpty()) {
                 showErrorDialog(activity);
             }
