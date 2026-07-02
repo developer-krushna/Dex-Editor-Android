@@ -772,7 +772,13 @@ public class SearchFragment extends Fragment {
                                                 StringBuffer sb = new StringBuffer();
                                                 while (m.find()) {
                                                     countInClass++;
-                                                    m.appendReplacement(sb, Matcher.quoteReplacement(replaceWith));
+                                                    try {
+                                                        m.appendReplacement(sb, replaceWith);
+                                                    } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
+                                                        // invalid group reference
+                                                        errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
+                                                        return;
+                                                    }
                                                 }
                                                 m.appendTail(sb);
                                                 modifiedText = sb.toString();
