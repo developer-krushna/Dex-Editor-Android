@@ -755,16 +755,32 @@ public class SearchFragment extends Fragment {
                                         int countInClass = 0;
 
                                         if (type.equals("String")) {
-                                            String findPattern = exactlyMatch ? "\"" + Pattern.quote(findQuery) + "\"" : Pattern.quote(findQuery);
-                                            String replacePattern = exactlyMatch ? "\"" + java.util.regex.Matcher.quoteReplacement(replaceWith) + "\"" : java.util.regex.Matcher.quoteReplacement(replaceWith);
-                                            Pattern p = Pattern.compile(findPattern, matchCase ? 0 : Pattern.CASE_INSENSITIVE);
-                                            java.util.regex.Matcher m = p.matcher(originalText);
+                                            Matcher lm = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(originalText);
                                             StringBuffer sb = new StringBuffer();
-                                            while (m.find()) {
-                                                countInClass++;
-                                                m.appendReplacement(sb, replacePattern);
+
+                                            int flag = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                                            String q1 = isRegex ? findQuery : Pattern.quote(findQuery);
+                                            String q2 = exactlyMatch ? "^" + q1 + "$" : q1;
+                                            Pattern innerFind = Pattern.compile(q2, flag);
+
+                                            while (lm.find()) {
+                                                Matcher im = innerFind.matcher(lm.group(1));
+                                                StringBuffer inner = new StringBuffer();
+                                                while (im.find()) {
+                                                    countInClass++;
+                                                    try {
+                                                        im.appendReplacement(inner, isRegex ? replaceWith : Matcher.quoteReplacement(replaceWith));
+                                                    } catch (IndexOutOfBoundsException | IllegalArgumentException e) {
+                                                        errorClasses.add(className + ": invalid replacement pattern - " + e.getMessage());
+                                                        return;
+                                                    }
+                                                }
+                                                im.appendTail(inner);
+
+                                                String newLiteral = "\"" + inner + "\"";
+                                                lm.appendReplacement(sb, Matcher.quoteReplacement(newLiteral));
                                             }
-                                            m.appendTail(sb);
+                                            lm.appendTail(sb);
                                             modifiedText = sb.toString();
                                         } else {
                                             if (isRegex) {
