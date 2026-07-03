@@ -205,9 +205,7 @@ public class DexEditorActivity extends AppCompatActivity {
         EditorFragment.clearCache();
     }
 
-    @SuppressLint("MissingSuperCall")
-    @Override
-    public void onBackPressed() {
+    private void handleBack(boolean checkDoublePress) {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
             return;
@@ -245,12 +243,18 @@ public class DexEditorActivity extends AppCompatActivity {
         }
 
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
+        if (!checkDoublePress || currentTime - lastBackPressTime < DOUBLE_PRESS_INTERVAL) {
             exitActivity();
         } else {
             lastBackPressTime = currentTime;
             SketchwareUtil.showMessage(this, "Press back again to exit");
         }
+    }
+
+    @SuppressLint("MissingSuperCall")
+    @Override
+    public void onBackPressed() {
+       handleBack(true);
     }
 
 
@@ -602,7 +606,7 @@ public class DexEditorActivity extends AppCompatActivity {
             showCompilationOptionsDialog();
             return true;
         } else if (id == R.id.action_exit) {
-            onBackPressed();
+            handleBack(false);
             return true;
         }
 
