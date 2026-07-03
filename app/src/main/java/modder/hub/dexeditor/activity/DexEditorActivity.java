@@ -78,8 +78,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.android.tools.smali.dexlib2.iface.ClassDef;
 import com.android.tools.smali.smali.SmaliOptions;
 import com.android.tools.smali.smali2.Smali;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
@@ -87,8 +89,13 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.github.rosemoe.sora.text.Content;
 import io.github.rosemoe.sora.text.Cursor;
@@ -146,6 +153,7 @@ public class DexEditorActivity extends AppCompatActivity {
     public int dexVersion;
     public List<TreeNode> searchNodes = new ArrayList<>();
     public String pendingSearchPath = null;
+    public String pendingStringSearchQuery = null;
     public TabsAdapter tabsAdapter;
     private boolean needsModifiedTreeRebuild = true;
     private boolean needsExplorerRefresh = false;
@@ -433,7 +441,7 @@ public class DexEditorActivity extends AppCompatActivity {
         }
     }
 
-    private void loadStrings() {
+    public void loadStrings() {
         if (classTree == null) return;
         showProcessingProgress(true);
         new Thread(new Runnable() {
@@ -1920,6 +1928,13 @@ public class DexEditorActivity extends AppCompatActivity {
                     // For History/Modified tab, we need to be careful.
                     // If we use ConcatAdapter, we might need to update sub-adapters.
                     // But for now, let's just fall through if position is 1.
+
+                    // Get string adapter from ConcatAdapter of strings tab
+                    List<? extends RecyclerView.Adapter<?>> adapters = ((ConcatAdapter) currentAdapter).getAdapters();
+                    if(adapters.size() > 1) {
+                        RecyclerView.Adapter<?> adapter = adapters.get(1);
+                        if (adapter instanceof StringAdapter) adapter.notifyDataSetChanged();
+                    }
                 } else {
                     currentAdapter.notifyDataSetChanged();
                 }
@@ -2074,17 +2089,126 @@ public class DexEditorActivity extends AppCompatActivity {
                     }, true);
                     break;
                 case 3:
-                    currentAdapter = new StringAdapter(activity.stringList, new modder.hub.dexeditor.adapter.StringAdapter.OnStringClickListener() {
-                        @Override
-                        public void onStringClick(String text) {
-                            // TO-DO
-                        }
-                    });
+                    View header = LayoutInflater.from(getContext()).inflate(R.layout.strings_header, rv, false);
+
+                    // holder trick so the click listener can reference the adapter it belongs to
+                    final StringAdapter[] holder = new StringAdapter[1];
+                    StringAdapter stringAdapter = new StringAdapter(activity.stringList, text -> activity.showStringEditDialog(holder[0], header.<TextView>findViewById(R.id.btn_strings_apply), text));
+                    holder[0] = stringAdapter;
+                    currentAdapter = new ConcatAdapter(new SearchFragment.HeaderViewAdapter(header), stringAdapter);
+
+                    /*header.findViewById(R.id.btn_strings_reload).setOnClickListener(v -> {
+                        stringAdapter.clearModifications();
+                        stringAdapter.setFilter(null);
+                        btnApply.setVisibility(View.GONE);
+                        activity.loadStrings();
+                    });*/ // It doesnt look like reload working maybe whole loadStrings implementation would need to change to get it to work
+                    header.findViewById(R.id.btn_strings_filter).setOnClickListener(v -> activity.showStringFilterDialog(stringAdapter));
+                    header.findViewById(R.id.btn_strings_replace).setOnClickListener(v -> activity.showStringReplaceAllDialog());
+                    header.findViewById(R.id.btn_strings_apply).setOnClickListener(v -> activity.applyStringChanges(stringAdapter, header.<TextView>findViewById(R.id.btn_strings_apply)));
                     break;
             }
             if (currentAdapter != null) {
                 rv.setAdapter(currentAdapter);
             }
+        }
+    }
+
+    public void showStringEditDialog(final StringAdapter adapter, final View btnApply, final String original) {
+        final EditText editText = new EditText(this);
+        editText.setText(adapter.getPendingValue(original));
+        editText.setSelection(editText.getText().length());
+        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        editText.setLayoutParams(params);
+        editText.setGravity(android.view.Gravity.TOP);
+
+        int pad = (int) getDip(16);
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(pad, pad, pad, pad);
+        container.addView(editText);
+        container.setLayoutParams(params);
+
+        final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("Edit string")
+                .setView(container)
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Search", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.show();
+
+        // Custom click listeners so "Search" doesn't auto-dismiss before we can read the field.
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String newValue = editText.getText().toString();
+            adapter.markModified(original, newValue);
+            btnApply.setVisibility(adapter.hasModifications() ? View.VISIBLE : View.GONE);
+            dialog.dismiss();
+        });
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            dialog.dismiss();
+            searchStringInClasses(original);
+        });
+    }
+
+    public void showStringFilterDialog(final StringAdapter adapter) {
+        final EditText editText = new EditText(this);
+        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        editText.setLayoutParams(params);
+        editText.setHint("Type to filter...");
+        if (adapter.getCurrentFilter() != null) editText.setText(adapter.getCurrentFilter());
+
+        int pad = (int) getDip(16);
+        LinearLayout container = new LinearLayout(this);
+        container.setPadding(pad, pad, pad, pad);
+        container.setLayoutParams(params);
+        container.addView(editText);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Filter strings")
+                .setView(container)
+                .setPositiveButton("Apply", (d, w) -> adapter.setFilter(editText.getText().toString()))
+                .setNegativeButton("Clear", (d, w) -> adapter.setFilter(null))
+                .show();
+    }
+
+    public void showStringReplaceAllDialog() {
+        View container = LayoutInflater.from(this).inflate(R.layout.string_replace_all_dialog, null);
+        TextView etFind = container.findViewById(R.id.etFind), etReplace = container.findViewById(R.id.etReplace);
+        MaterialCheckBox swMatchCase = container.findViewById(R.id.swMatchCase);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Replace in all strings")
+                .setView(container)
+                .setPositiveButton("Replace", (d, w) -> {
+                    String find = etFind.getText().toString();
+                    String replace = etReplace.getText().toString();
+                    if (find.isEmpty()) return;
+                    new StringBatchTask(this, null, find, replace, swMatchCase.isChecked(), null).start();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    public void applyStringChanges(final StringAdapter adapter, final View btnApply) {
+        final Map<String, String> changes = new LinkedHashMap<>(adapter.getModifiedStrings());
+        if (changes.isEmpty()) return;
+        new StringBatchTask(this, changes, null, null, true, () -> {
+            adapter.clearModifications();
+            btnApply.setVisibility(View.GONE);
+            loadStrings();
+        }).start();
+    }
+
+    public void searchStringInClasses(String query) {
+        if (explorerViewPager == null) return;
+        explorerViewPager.setCurrentItem(2, true);
+        Fragment f = getSupportFragmentManager().findFragmentByTag("f2002");
+        if (f instanceof SearchFragment) {
+            ((SearchFragment) f).runStringSearch(query);
+        } else {
+            // Fragment not created/attached yet - SearchFragment.onResume() will pick this up.
+            pendingStringSearchQuery = query;
         }
     }
 
@@ -2186,6 +2310,138 @@ public class DexEditorActivity extends AppCompatActivity {
             });
             builder.setCancelable(false);
             Notify_MT.Dlg_Style(builder);
+        }
+    }
+
+    private static class StringBatchTask {
+        private final java.lang.ref.WeakReference<DexEditorActivity> activityRef;
+        private final Map<String, String> exactReplacements;
+        private final String findSubstring;
+        private final String replaceSubstring;
+        private final boolean matchCase;
+        private final Runnable onDone;
+        private final Handler mainHandler = new Handler(Looper.getMainLooper());
+        private AlertProgress progressDialog;
+        private volatile boolean isStopped = false;
+
+        StringBatchTask(DexEditorActivity activity, Map<String, String> exactReplacements,
+                        String findSubstring, String replaceSubstring, boolean matchCase, Runnable onDone) {
+            this.activityRef = new java.lang.ref.WeakReference<>(activity);
+            this.exactReplacements = exactReplacements;
+            this.findSubstring = findSubstring;
+            this.replaceSubstring = replaceSubstring;
+            this.matchCase = matchCase;
+            this.onDone = onDone;
+        }
+
+        void start() {
+            final DexEditorActivity activity = activityRef.get();
+            if (activity == null || classTree == null) return;
+
+            progressDialog = new AlertProgress(activity);
+            progressDialog.setTitle("Applying changes...");
+            progressDialog.setCancelable(false);
+            progressDialog.setOnCancelListener(() -> isStopped = true);
+            progressDialog.show();
+
+            final Map<String, String> openTabsContent = new HashMap<>();
+            for (int i = 0; i < tabs.size(); i++) {
+                EditorTab tab = tabs.get(i);
+                if (tab.type == 0) {
+                    EditorFragment ef = activity.getFragmentAtIndex(i);
+                    if (ef != null && ef.getEditor() != null) {
+                        openTabsContent.put(tab.className, ef.getEditor().getText().toString());
+                    } else {
+                        openTabsContent.put(tab.className, tab.content);
+                    }
+                }
+            }
+
+            new Thread(() -> {
+                List<ClassDef> classes = new ArrayList<>(classTree.classMap.values());
+                int total = classes.size();
+                int processed = 0, replacedCount = 0, affectedClasses = 0;
+                final Map<String, String> updatedTabs = new HashMap<>();
+                Pattern literalPattern = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"");
+
+                for (ClassDef classDef : classes) {
+                    if (isStopped) break;
+                    String fullType = classDef.getType();
+                    String className = fullType.substring(1, fullType.length() - 1);
+                    try {
+                        String original = openTabsContent.containsKey(className) ? openTabsContent.get(className) : classTree.getSmaliByType(classDef);
+
+                        Matcher m = literalPattern.matcher(original);
+                        StringBuffer sb = new StringBuffer();
+                        int countInClass = 0;
+                        while (m.find()) {
+                            String literal = m.group(1);
+                            String replaced = applyRules(literal);
+                            if (!replaced.equals(literal)) countInClass++;
+                            m.appendReplacement(sb, Matcher.quoteReplacement("\"" + replaced + "\""));
+                        }
+                        m.appendTail(sb);
+
+                        if (countInClass > 0) {
+                            String modified = sb.toString();
+                            try {
+                                ClassDef newDef = Smali.assemble(modified, new SmaliOptions(), activity.dexVersion);
+                                classTree.saveClassDef(newDef);
+                            } catch (Exception e) {
+                                classTree.saveSmali(className, modified);
+                            }
+                            replacedCount += countInClass;
+                            affectedClasses++;
+                            if (openTabsContent.containsKey(className)) updatedTabs.put(className, modified);
+                        }
+                    } catch (Exception ignored) {
+                    }
+
+                    processed++;
+                    final int fp = processed, ft = total;
+                    mainHandler.post(() -> {
+                        if (progressDialog != null && progressDialog.isShowing()) progressDialog.setProgress(fp, ft);
+                    });
+                }
+
+                final int finalReplaced = replacedCount, finalAffected = affectedClasses;
+                mainHandler.post(() -> {
+                    if (progressDialog != null && progressDialog.isShowing()) progressDialog.dismiss();
+                    if (!updatedTabs.isEmpty()) {
+                        for (Map.Entry<String, String> e : updatedTabs.entrySet()) {
+                            for (int i = 0; i < tabs.size(); i++) {
+                                EditorTab tab = tabs.get(i);
+                                if (tab.className.equals(e.getKey()) && tab.type == 0) {
+                                    tab.content = e.getValue();
+                                    EditorFragment ef = activity.getFragmentAtIndex(i);
+                                    if (ef != null && ef.getEditor() != null) ef.getEditor().setText(e.getValue());
+                                }
+                            }
+                        }
+                    }
+                    Notify_MT.Notify(activity, "Info", "Replaced " + finalReplaced + " occurrence(s) in " + finalAffected + " class(es).", "Close");
+                    isChanged = true;
+                    activity.needsModifiedTreeRebuild = true;
+                    activity.refreshExplorerPage(1);
+                    if (onDone != null) onDone.run();
+                });
+            }).start();
+        }
+
+        private String applyRules(String literal) {
+            if (exactReplacements != null) {
+                String rep = exactReplacements.get(literal);
+                if (rep != null) return rep; // exact whole-literal match (used by "Apply changes")
+            }
+            if (findSubstring != null && !findSubstring.isEmpty()) {
+                if (matchCase) {
+                    return literal.replace(findSubstring, replaceSubstring);
+                } else {
+                    Pattern p = Pattern.compile(Pattern.quote(findSubstring), Pattern.CASE_INSENSITIVE);
+                    return p.matcher(literal).replaceAll(Matcher.quoteReplacement(replaceSubstring));
+                }
+            }
+            return literal;
         }
     }
 

@@ -223,6 +223,11 @@ public class SearchFragment extends Fragment {
             activity.pendingSearchPath = null;
             showSearchDialogWithPath(path);
         }
+        if (activity != null && activity.pendingStringSearchQuery != null) {
+            String q = activity.pendingStringSearchQuery;
+            activity.pendingStringSearchQuery = null;
+            runStringSearch(q);
+        }
     }
 
     public void refreshUI() {
@@ -236,9 +241,22 @@ public class SearchFragment extends Fragment {
         showSearchDialog(false, path);
     }
 
-    private static class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.ViewHolder> {
+    public void runStringSearch(String query) {
+        lastSearchQuery = query;
+        lastSearchType = "String";
+        lastMatchCase = true;
+        lastIsRegex = false;
+        lastExactlyMatch = false;
+        searchResults.clear();
+        currentQuery = null;
+        if (adapter != null) adapter.refreshVisibleNodes();
+        updateUIState();
+        new SearchTask(this, query, "/", "String", true, true, false, false, false, null, false).start();
+    }
+
+    public static class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.ViewHolder> {
         private final View view;
-        HeaderViewAdapter(View view) {
+        public HeaderViewAdapter(View view) {
             this.view = view;
         }
         @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
