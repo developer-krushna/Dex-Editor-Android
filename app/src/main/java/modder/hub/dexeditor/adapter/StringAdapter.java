@@ -35,24 +35,43 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
 import modder.hub.dexeditor.R;
+
 /*
  * Author - @developer-krushna
  * this class responsible for listing strings from dex files
  */
 public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder> {
-    private List<String> strings;
-    private OnStringClickListener listener;
+
+    private static final int COLOR_MODIFIED = 0xFF2E7D32; // green
+    private static final int COLOR_NORMAL = 0xFF000000;
+
+    // Full, unfiltered dataset - kept as a reference to the activity's backing list
+    private final List<String> allStrings;
+    // Subset currently shown (equals allStrings when no filter is active)
+    private List<String> displayedStrings;
+    // original string -> pending new value (not yet applied to the dex classes)
+    private final Map<String, String> modifiedStrings = new LinkedHashMap<>();
+
+    private final OnStringClickListener listener;
+    private String currentFilter = null;
 
     public interface OnStringClickListener {
         void onStringClick(String text);
     }
 
     public StringAdapter(List<String> strings, OnStringClickListener listener) {
-        this.strings = strings;
+        this.allStrings = strings;
+        this.displayedStrings = strings;
         this.listener = listener;
     }
 
@@ -65,23 +84,83 @@ public class StringAdapter extends RecyclerView.Adapter<StringAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        final String text = strings.get(position);
-        holder.stringText.setText(text);
+        final String original = displayedStrings.get(position);
+        final boolean isModified = modifiedStrings.containsKey(original);
+        final String displayText = isModified ? modifiedStrings.get(original) : original;
+
+        holder.stringText.setText(displayText);
+        holder.stringText.setTextColor(isModified ? COLOR_MODIFIED : COLOR_NORMAL);
+
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (listener != null) listener.onStringClick(text);
+                if (listener != null) listener.onStringClick(original);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return strings.size();
+        return displayedStrings.size();
+    }
+
+    public void refresh() {
+        applyFilter(currentFilter);
+    }
+
+    public void setFilter(String query) {
+        currentFilter = (query == null || query.trim().isEmpty()) ? null : query.trim();
+        applyFilter(currentFilter);
+    }
+
+    public String getCurrentFilter() {
+        return currentFilter;
+    }
+
+    private void applyFilter(String query) {
+        if (query == null) {
+            displayedStrings = allStrings;
+        } else {
+            String lower = query.toLowerCase();
+            List<String> filtered = new ArrayList<>();
+            for (String s : allStrings) {
+                if (s != null && s.toLowerCase().contains(lower)) filtered.add(s);
+            }
+            displayedStrings = filtered;
+        }
+        notifyDataSetChanged();
+    }
+
+    public void markModified(String original, String newValue) {
+        if (newValue == null || newValue.equals(original)) {
+            modifiedStrings.remove(original);
+        } else {
+            modifiedStrings.put(original, newValue);
+        }
+        notifyDataSetChanged();
+    }
+
+    public String getPendingValue(String original) {
+        String v = modifiedStrings.get(original);
+        return v != null ? v : original;
+    }
+
+    public boolean hasModifications() {
+        return !modifiedStrings.isEmpty();
+    }
+
+    public Map<String, String> getModifiedStrings() {
+        return modifiedStrings;
+    }
+
+    public void clearModifications() {
+        modifiedStrings.clear();
+        notifyDataSetChanged();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView stringText;
+
         ViewHolder(View itemView) {
             super(itemView);
             stringText = itemView.findViewById(R.id.string_text);
