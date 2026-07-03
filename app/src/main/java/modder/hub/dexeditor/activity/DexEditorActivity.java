@@ -2115,19 +2115,10 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     public void showStringEditDialog(final StringAdapter adapter, final View btnApply, final String original) {
-        final EditText editText = new EditText(this);
+        View container = LayoutInflater.from(this).inflate(R.layout.string_edit_dialog, null);
+        final EditText editText = container.findViewById(R.id.string_edit_text);
         editText.setText(adapter.getPendingValue(original));
         editText.setSelection(editText.getText().length());
-        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        editText.setLayoutParams(params);
-        editText.setGravity(android.view.Gravity.TOP);
-
-        int pad = (int) getDip(16);
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(pad, pad, pad, pad);
-        container.addView(editText);
-        container.setLayoutParams(params);
 
         final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Edit string")
@@ -2152,17 +2143,10 @@ public class DexEditorActivity extends AppCompatActivity {
     }
 
     public void showStringFilterDialog(final StringAdapter adapter) {
-        final EditText editText = new EditText(this);
-        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        editText.setLayoutParams(params);
+        View container = LayoutInflater.from(this).inflate(R.layout.string_edit_dialog, null);
+        TextView editText = container.findViewById(R.id.string_edit_text);
         editText.setHint("Type to filter...");
         if (adapter.getCurrentFilter() != null) editText.setText(adapter.getCurrentFilter());
-
-        int pad = (int) getDip(16);
-        LinearLayout container = new LinearLayout(this);
-        container.setPadding(pad, pad, pad, pad);
-        container.setLayoutParams(params);
-        container.addView(editText);
 
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Filter strings")
