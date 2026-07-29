@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical">
+
+        <!-- <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_strings_reload"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:background="?attr/selectableItemBackground"
+            android:text="Reload"
+            android:textSize="13sp"
+            android:textColor="?attr/colorOnSurface"
+            app:iconTint="?attr/colorOnSurface"
+            app:icon="@drawable/refresh_24px" /> -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_strings_filter"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:background="?attr/selectableItemBackground"
+            android:textColor="?attr/colorOnSurface"
+            app:iconTint="?attr/colorOnSurface"
+            app:icon="@drawable/filter_alt_24px"
+            android:text="Filter"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_strings_replace"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:background="?attr/selectableItemBackground"
+            android:text="@string/sora_editor_replace"
+            android:textColor="?attr/colorOnSurface"
+            app:iconTint="?attr/colorOnSurface"
+            app:icon="@drawable/ic_search_replace"
+            android:textSize="13sp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_strings_apply"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:background="?attr/selectableItemBackground"
+            android:text="Apply changes"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            app:iconTint="?attr/colorOnSurface"
+            app:icon="@drawable/check_circle_24px"
+            android:visibility="gone" />
+</LinearLayout>
